@@ -1,0 +1,68 @@
+# docker-compose.yml
+# Stack completo de PRODUCCIÓN — MySQL + App Next.js + Adminer
+# Uso: docker compose up -d --build
+
+services:
+  mysql:
+    image: mysql:lts
+    container_name: crew-zingy-mysql
+    restart: unless-stopped
+    ports:
+      - "${MYSQL_PORT:-3307}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - crew_zingy_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crew-zingy-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3001}:3000"
+    environment:
+      # Base de datos (apunta al servicio interno 'mysql')
+      DATABASE_URL: mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
+      # Autenticacion
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      CLIENT_JWT_SECRET: ${CLIENT_JWT_SECRET}
+      # App URLs
+      NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL}
+      # Typebot
+      NEXT_PUBLIC_TYPEBOT_ID: ${NEXT_PUBLIC_TYPEBOT_ID}
+      NEXT_PUBLIC_TYPEBOT_API_HOST: ${NEXT_PUBLIC_TYPEBOT_API_HOST}
+      # Web Push VAPID
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_SUBJECT: ${VAPID_SUBJECT}
+      # Seed inicial del admin (solo primer arranque, puede borrarse después)
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  adminer:
+    image: adminer:latest
+    container_name: crew-zingy-adminer
+    restart: unless-stopped
+    ports:
+      - "${ADMINER_PORT:-8081}:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  crew_zingy_mysql_data:
+    driver: local

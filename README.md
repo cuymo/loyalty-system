@@ -1,36 +1,99 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Crew Zingy — Plataforma de Fidelización Digital
 
-## Getting Started
+**Crew Zingy** es una plataforma de loyalty digital para comercios. Reemplaza las tarjetas de sellos físicas por una experiencia completamente digital basada en códigos QR, WhatsApp y puntos.
 
-First, run the development server:
+## 🗂️ Stack Tecnológico
+
+| Componente   | Tecnología                                 |
+|---|---|
+| Framework    | Next.js 16 (App Router + React 19)         |
+| Base de Datos| MySQL 8 (vía Drizzle ORM)                  |
+| Auth Admin   | NextAuth v5                                |
+| Auth Cliente | JWT firmado (jose)                         |
+| UI           | shadcn/ui + Tailwind v4                    |
+| Push Notifs  | Web Push API (VAPID)                       |
+| Webhooks     | HTTP POST hacia n8n u otros               |
+| Despliegue   | Docker + Docker Compose                    |
+
+---
+
+## ⚡ Inicio Rápido (Desarrollo Local)
 
 ```bash
+# 1. Clonar el repo
+git clone https://github.com/tu-usuario/crew-zingy.git
+cd crew-zingy
+
+# 2. Configurar variables de entorno
+cp .env.example .env
+# Edita .env con tus datos reales
+
+# 3. Instalar dependencias
+npm install
+
+# 4. Levantar base de datos
+docker compose -f docker-compose.db.yml up -d
+
+# 5. Sincronizar esquema
+npm run db:push
+
+# 6. Crear admin inicial
+npm run db:seed
+
+# 7. Iniciar app
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Accede a:
+- **App:** http://localhost:3000
+- **Adminer (BD):** http://localhost:8081
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🚀 Producción en Docker (VPS)
 
-## Learn More
+```bash
+# 1. Configura .env con tus datos de producción
+cp .env.example .env
+nano .env
 
-To learn more about Next.js, take a look at the following resources:
+# 2. Levantar todo el stack (MySQL + App + Adminer)
+docker compose up -d --build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+El contenedor de la app automáticamente:
+1. Sincroniza el esquema de BD con `drizzle-kit push`
+2. Crea el admin inicial con `seed.ts`
+3. Arranca Next.js en el puerto 3000 (mapeado al `APP_PORT` en `.env`)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Configura tu Nginx / Traefik apuntando a `http://localhost:$APP_PORT`.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🔐 Variables de Entorno
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Ver [`INSTRUCCIONES.md`](./INSTRUCCIONES.md) para la guía completa.
+
+### Variables críticas:
+| Variable | Descripción |
+|---|---|
+| `DATABASE_URL` | URL de conexión a MySQL |
+| `NEXTAUTH_SECRET` | Clave para cookies de sesión admin |
+| `CLIENT_JWT_SECRET` | Clave para tokens JWT de clientes |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Clave pública VAPID (push notifications) |
+| `VAPID_PRIVATE_KEY` | Clave privada VAPID (push notifications) |
+| `INITIAL_ADMIN_EMAIL` | Email del admin (solo primer arranque) |
+| `INITIAL_ADMIN_PASSWORD` | Password del admin (solo primer arranque) |
+
+---
+
+## 📋 Scripts Disponibles
+
+```bash
+npm run dev        # Servidor de desarrollo
+npm run build      # Build de producción
+npm run start      # Servidor de producción (post-build)
+npm run lint       # Linter ESLint
+npm run db:push    # Sincronizar esquema Drizzle con BD
+npm run db:seed    # Crear admin inicial
+```

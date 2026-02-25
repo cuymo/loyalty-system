@@ -1,0 +1,1041 @@
+/**
+ * actions/client/index.ts
+ * Descripcion: Server Actions para operaciones de clientes (OTP, puntos, canje, perfil)
+ * Fecha de creacion: 2026-02-21
+ * Autor: Crew Zingy Dev
+ * Fecha de modificacion: 2026-02-21
+ * Descripcion de la modificacion: Implementacion completa de flujo OTP, canje, codigo, perfil
+ */
+
+"use server";
+
+import { db } from "@/db";
+import { clients, codes, rewards, redemptions, settings, nameChangesHistory, appNotifications, adminNotifications } from "@/db/schema";
+import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
+import {
+    createClientSession,
+    getClientSession,
+    destroyClientSession,
+    createRegistrationToken,
+    verifyRegistrationToken,
+    destroyRegistrationToken
+} from "@/lib/auth/client-jwt";
+import { revalidatePath } from "next/cache";
+import { randomUUID } from "crypto";
+import { readdir } from "fs/promises";
+import { join } from "path";
+import { triggerWebhook } from "@/lib/webhook";
+import { eventBus } from "@/lib/events";
+
+// ============================================
+// SETTINGS GLOBALES
+// ============================================
+
+export async function getPublicSettings() {
+    const all = await db.select().from(settings);
+    return all.reduce((acc, curr) => {
+        acc[curr.key] = curr.value || "";
+        return acc;
+    }, {} as Record<string, string>);
+}
+
+// ============================================
+// OTP (Simulado - en produccion usa Typebot/WhatsApp)
+// ============================================
+
+// Store temporal de OTPs en memoria (en produccion: Redis o BD)
+const otpStore = new Map<string, { otp: string; expiresAt: number; sentAt: number }>();
+
+// Store persistente en memoria para rate limits de seguridad
+const rateLimitStore = new Map<string, { requests: number; verifyAttempts: number; lockedUntil: number }>();
+
+const OTP_COOLDOWN_MS = 20_000;  // 20 segundos entre reenvíos
+const OTP_MAX_REQUESTS = 3;       // Máximo 3 solicitudes
+const OTP_MAX_VERIFIES = 3;       // Máximo 3 intentos de verificación fallidos
+const OTP_LOCKOUT_MS = 15 * 60 * 1000; // Bloqueo de 15 minutos
+const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutos de vida
+
+export async function requestOtp(phone: string) {
+    const now = Date.now();
+    const rateLimit = rateLimitStore.get(phone) || { requests: 0, verifyAttempts: 0, lockedUntil: 0 };
+
+    // Verificar si está bloqueado
+    if (now < rateLimit.lockedUntil) {
+        const remaining = Math.ceil((rateLimit.lockedUntil - now) / 60000);
+        return { success: false, error: `Demasiados intentos. Intenta en ${remaining} minutos.`, isLocked: true };
+    }
+
+    const existingOtp = otpStore.get(phone);
+
+    // Verificar cooldown de envío
+    if (existingOtp) {
+        const elapsed = now - existingOtp.sentAt;
+        if (elapsed < OTP_COOLDOWN_MS) {
+            const remaining = Math.ceil((OTP_COOLDOWN_MS - elapsed) / 1000);
+            return { success: false, error: `Espera ${remaining}s para reenviar`, cooldownRemaining: remaining };
+        }
+    }
+
+    // Verificar máximo de envíos
+    if (rateLimit.requests >= OTP_MAX_REQUESTS) {
+        rateLimit.lockedUntil = now + OTP_LOCKOUT_MS;
+        rateLimit.requests = 0; // reset para después del bloqueo
+        rateLimit.verifyAttempts = 0;
+        rateLimitStore.set(phone, rateLimit);
+
+        // Disparar webhook de bloqueo
+        await triggerWebhook("cliente.cuenta_bloqueada", {
+            phone,
+            razon: "Límite de envíos excedido (3/3)",
+            bloqueadoHasta: new Date(rateLimit.lockedUntil).toISOString()
+        });
+
+        return { success: false, error: "Límite de envíos agotado. Bloqueado por 15 minutos.", isLocked: true };
+    }
+
+    // Generar OTP de 6 digitos
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    otpStore.set(phone, {
+        otp,
+        expiresAt: now + OTP_EXPIRY_MS,
+        sentAt: now,
+    });
+
+    rateLimit.requests += 1;
+    rateLimitStore.set(phone, rateLimit);
+
+    // Trigger Webhook para OTP
+    await triggerWebhook("cliente.otp_solicitado", {
+        phone,
+        otp: process.env.NODE_ENV === "development" ? otp : undefined,
+        expiresInMinutes: 5,
+        attempt: rateLimit.requests,
+        status: "pending"
+    });
+
+    return { success: true, cooldownRemaining: OTP_COOLDOWN_MS / 1000 };
+}
+
+export async function verifyOtp(phone: string, otp: string) {
+    const now = Date.now();
+    const rateLimit = rateLimitStore.get(phone) || { requests: 0, verifyAttempts: 0, lockedUntil: 0 };
+
+    if (now < rateLimit.lockedUntil) {
+        const remaining = Math.ceil((rateLimit.lockedUntil - now) / 60000);
+        return { success: false, error: `Bloqueado por seguridad. Intenta en ${remaining} minutos.` };
+    }
+
+    const stored = otpStore.get(phone);
+
+    if (!stored) {
+        return { success: false, error: "No se ha solicitado un código para este número" };
+    }
+
+    if (now > stored.expiresAt) {
+        otpStore.delete(phone);
+        return { success: false, error: "El código ha expirado. Solicita uno nuevo." };
+    }
+
+    if (stored.otp !== otp) {
+        rateLimit.verifyAttempts += 1;
+        if (rateLimit.verifyAttempts >= OTP_MAX_VERIFIES) {
+            rateLimit.lockedUntil = now + OTP_LOCKOUT_MS;
+            rateLimit.requests = 0;
+            rateLimit.verifyAttempts = 0;
+            rateLimitStore.set(phone, rateLimit);
+            otpStore.delete(phone); // Invalidar código actual
+
+            // Disparar webhook de bloqueo por mala digitación
+            await triggerWebhook("cliente.cuenta_bloqueada", {
+                phone,
+                razon: "Demasiados intentos de verificación fallidos (3/3)",
+                bloqueadoHasta: new Date(rateLimit.lockedUntil).toISOString()
+            });
+
+            return { success: false, error: "Demasiados intentos fallidos. Intentos bloqueados por 15 minutos." };
+        }
+        rateLimitStore.set(phone, rateLimit);
+        return { success: false, error: `Código incorrecto. Te quedan ${OTP_MAX_VERIFIES - rateLimit.verifyAttempts} intentos.` };
+    }
+
+    // Éxito: Limpiar estado de OTP y límites
+    otpStore.delete(phone);
+    rateLimitStore.delete(phone);
+
+    // Buscar o crear cliente
+    const [existingClient] = await db
+        .select()
+        .from(clients)
+        .where(eq(clients.phone, phone))
+        .limit(1);
+
+    if (existingClient) {
+        // Cuenta soft-deleted: reactivar con datos limpios
+        if (existingClient.deletedAt) {
+            // Liberar el username anterior para que otros lo usen
+            const tempUsername = `reactivating_${existingClient.id}_${Date.now()}`;
+            await db.update(clients).set({
+                deletedAt: null,
+                points: 0,
+                username: tempUsername,
+                avatarSvg: "default.svg",
+                wantsMarketing: true,
+                wantsTransactional: true,
+            }).where(eq(clients.id, existingClient.id));
+
+            await triggerWebhook("cliente.cuenta_reactivada", {
+                clientId: existingClient.id,
+                phone,
+                reactivatedAt: new Date().toISOString(),
+            });
+
+            await db.insert(adminNotifications).values({
+                type: "client_reactivated",
+                message: `Cliente reactivó su cuenta: ${phone}`,
+                isRead: false,
+            });
+
+            eventBus.emit("admin_notification", {
+                type: "client_reactivated",
+                message: `Cliente reactivó su cuenta: ${phone}`,
+            });
+
+            // Retornar como "nuevo" para que elija nombre y avatar desde cero
+            await createRegistrationToken(phone);
+            return { success: true, isNew: true, phone };
+        }
+
+        // Login normal: crear sesion
+        await createClientSession({
+            clientId: existingClient.id,
+            phone: existingClient.phone,
+            username: existingClient.username,
+        });
+
+        // Insert persistent login notification
+        await db.insert(appNotifications).values({
+            clientId: existingClient.id,
+            title: "Inicio de Sesión",
+            body: `Has iniciado sesión en un nuevo dispositivo el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}.`,
+            isRead: false,
+            type: "login"
+        });
+
+        // Trigger Webhook
+        await triggerWebhook("cliente.sesion_iniciada", {
+            clientId: existingClient.id,
+            phone: existingClient.phone,
+            username: existingClient.username,
+            points: existingClient.points,
+            avatarSvg: existingClient.avatarSvg
+        });
+
+        return { success: true, isNew: false };
+    }
+
+    // Es nuevo: necesita registrarse
+    await createRegistrationToken(phone);
+    return { success: true, isNew: true, phone };
+}
+
+export async function registerClient(data: {
+    phone: string;
+    username: string;
+    avatarSvg: string;
+    birthDate: string;
+    referredByCode?: number;
+    wantsMarketing?: boolean;
+    wantsTransactional?: boolean;
+}) {
+    // Verificar token temporal de registro para evitar acceso directo via URL
+    const isValidToken = await verifyRegistrationToken(data.phone);
+    if (!isValidToken) {
+        return { success: false, error: "Tu sesión de registro expiró o es inválida. Por favor, verifica tu número nuevamente desde inicio." };
+    }
+
+    // Verificar unicidad de username
+    const [existingUsername] = await db
+        .select()
+        .from(clients)
+        .where(eq(clients.username, data.username))
+        .limit(1);
+
+    if (existingUsername) {
+        return { success: false, error: "Este nombre de usuario ya esta en uso" };
+    }
+
+    // Comprobar si es una cuenta reactivada (phone ya existe, deletedAt = null tras reactivación)
+    const [existingPhone] = await db
+        .select()
+        .from(clients)
+        .where(eq(clients.phone, data.phone))
+        .limit(1);
+
+    if (existingPhone) {
+        // Cuenta reactivada: actualizar username, avatar y birthDate
+        await db.update(clients).set({
+            username: data.username,
+            avatarSvg: data.avatarSvg,
+            birthDate: data.birthDate,
+            wantsMarketing: data.wantsMarketing ?? true,
+            wantsTransactional: data.wantsTransactional ?? true,
+        }).where(eq(clients.id, existingPhone.id));
+
+        await createClientSession({
+            clientId: existingPhone.id,
+            phone: data.phone,
+            username: data.username,
+        });
+
+        await triggerWebhook("cliente.cuenta_reactivada", {
+            clientId: existingPhone.id,
+            phone: data.phone,
+            username: data.username,
+            avatarSvg: data.avatarSvg,
+            reactivated: true,
+            createdAt: new Date().toISOString()
+        });
+
+        // Insert persistent login notification for security tracking
+        await db.insert(appNotifications).values({
+            clientId: existingPhone.id,
+            title: "Cuenta Reactivada e Inicio de Sesión",
+            body: `Has reactivado tu cuenta e iniciado sesión el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}.`,
+            isRead: false,
+            type: "account_reactivated"
+        });
+
+        await db.insert(adminNotifications).values({
+            type: "new_client",
+            message: `Cliente reactivado: ${data.username}`,
+            isRead: false
+        });
+
+        eventBus.emit("admin_notification", {
+            type: "new_client",
+            message: `Cliente reactivado: ${data.username}`,
+        });
+
+        await destroyRegistrationToken();
+        return { success: true };
+    }
+
+    // Handle Referral logic
+    let validReferrer = false;
+    let referrerData = null;
+
+    if (data.referredByCode) {
+        const [referrer] = await db
+            .select()
+            .from(clients)
+            .where(eq(clients.id, data.referredByCode))
+            .limit(1);
+
+        if (referrer) {
+            validReferrer = true;
+            referrerData = referrer;
+        } else {
+            return { success: false, error: "El código de referido ingresado no existe." };
+        }
+    }
+
+    let referralBonusReferred = 0;
+    let referralBonusReferrer = 0;
+    let referralMaxLimit = 0;
+
+    if (validReferrer) {
+        const pubSettings = await getPublicSettings();
+        referralBonusReferred = parseInt(pubSettings.referral_bonus_referred || "50");
+        referralBonusReferrer = parseInt(pubSettings.referral_bonus_referrer || "100");
+        referralMaxLimit = parseInt(pubSettings.referral_max_limit || "5");
+    }
+
+    const [newClient] = await db
+        .insert(clients)
+        .values({
+            phone: data.phone,
+            username: data.username,
+            avatarSvg: data.avatarSvg,
+            birthDate: data.birthDate,
+            referredBy: validReferrer ? data.referredByCode : null,
+            points: validReferrer ? referralBonusReferred : 0,
+            lifetimePoints: validReferrer ? referralBonusReferred : 0,
+            wantsMarketing: data.wantsMarketing ?? true,
+            wantsTransactional: data.wantsTransactional ?? true,
+        })
+        .$returningId();
+
+    // Reward referrer if limit not exceeded
+    if (validReferrer && referrerData) {
+        const newCount = referrerData.referralCount + 1;
+        const pointsToAdd = newCount <= referralMaxLimit ? referralBonusReferrer : 0;
+
+        await db.update(clients)
+            .set({
+                referralCount: newCount,
+                points: sql`${clients.points} + ${pointsToAdd}`,
+                lifetimePoints: sql`${clients.lifetimePoints} + ${pointsToAdd}`
+            })
+            .where(eq(clients.id, referrerData.id));
+
+        await triggerWebhook("cliente.referido", {
+            referrerId: referrerData.id,
+            referrerUsername: referrerData.username,
+            newClientId: newClient.id,
+            newClientUsername: data.username,
+            pointsAwardedToReferrer: pointsToAdd,
+            pointsAwardedToReferred: referralBonusReferred
+        });
+
+        if (pointsToAdd > 0) {
+            await db.insert(appNotifications).values({
+                clientId: referrerData.id,
+                title: "¡Alguien usó tu código!",
+                body: `${data.username} se registró usando tu código. ¡Acabas de ganar ${pointsToAdd} puntos!`,
+                isRead: false,
+                type: "referral_success"
+            });
+        }
+    }
+
+    await createClientSession({
+        clientId: newClient.id,
+        phone: data.phone,
+        username: data.username,
+    });
+
+    // Trigger Webhook
+    await triggerWebhook("cliente.sesion_iniciada", {
+        clientId: newClient.id,
+        phone: data.phone,
+        username: data.username,
+        avatarSvg: data.avatarSvg,
+        timestamp: new Date().toISOString()
+    });
+
+    // Insert persistent login notification for security tracking
+    await db.insert(appNotifications).values({
+        clientId: newClient.id,
+        title: "Inicio de Sesión",
+        body: `Has iniciado sesión en un dispositivo el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}.`,
+        isRead: false,
+        type: "login"
+    });
+
+    await db.insert(adminNotifications).values({
+        type: "new_client",
+        message: `Nuevo cliente registrado: ${data.username}`,
+        isRead: false
+    });
+
+    eventBus.emit("admin_notification", {
+        type: "new_client",
+        message: `Nuevo cliente registrado: ${data.username}`,
+    });
+
+    await destroyRegistrationToken();
+    return { success: true };
+}
+
+// ============================================
+// PERFIL
+// ============================================
+
+export async function getClientProfile() {
+    const session = await getClientSession();
+    if (!session) return null;
+
+    const [client] = await db
+        .select()
+        .from(clients)
+        .where(eq(clients.id, session.clientId))
+        .limit(1);
+
+    if (!client) return null;
+
+    // Logic for 2 name changes per membership year
+    const registrationDate = client.createdAt;
+    const now = new Date();
+
+    let membershipYearStart = new Date(registrationDate);
+    membershipYearStart.setFullYear(now.getFullYear());
+
+    if (now < membershipYearStart) {
+        membershipYearStart.setFullYear(now.getFullYear() - 1);
+    }
+
+    let membershipYearEnd = new Date(membershipYearStart);
+    membershipYearEnd.setFullYear(membershipYearStart.getFullYear() + 1);
+
+    const pastChangesInYear = await db
+        .select()
+        .from(nameChangesHistory)
+        .where(
+            and(
+                eq(nameChangesHistory.clientId, session.clientId),
+                gte(nameChangesHistory.createdAt, membershipYearStart),
+                lte(nameChangesHistory.createdAt, membershipYearEnd)
+            )
+        );
+
+    const changesRemaining = Math.max(0, 2 - pastChangesInYear.length);
+
+    // VIP Tier Logic
+    const pubSettings = await getPublicSettings();
+    const tierBronze = parseInt(pubSettings.tier_bronze_points || "100");
+    const tierSilver = parseInt(pubSettings.tier_silver_points || "500");
+    const tierGold = parseInt(pubSettings.tier_gold_points || "1000");
+    const tierVip = parseInt(pubSettings.tier_vip_points || "5000");
+
+    let currentTier = "none";
+    let nextTierPoints = tierBronze;
+    let nextTierName = "Bronce";
+
+    if (client.lifetimePoints >= tierVip) {
+        currentTier = "vip";
+        nextTierPoints = tierVip; // Reached max
+        nextTierName = "Nivel Máximo";
+    } else if (client.lifetimePoints >= tierGold) {
+        currentTier = "gold";
+        nextTierPoints = tierVip;
+        nextTierName = "VIP";
+    } else if (client.lifetimePoints >= tierSilver) {
+        currentTier = "silver";
+        nextTierPoints = tierGold;
+        nextTierName = "Oro";
+    } else if (client.lifetimePoints >= tierBronze) {
+        currentTier = "bronze";
+        nextTierPoints = tierSilver;
+        nextTierName = "Plata";
+    }
+
+    const vip = {
+        currentTier,
+        nextTierPoints,
+        nextTierName,
+        lifetimePoints: client.lifetimePoints
+    };
+
+    return { ...client, changesRemaining, vip };
+}
+
+export async function updateClientProfile(data: {
+    username?: string;
+    avatarSvg?: string;
+    wantsMarketing?: boolean;
+    wantsTransactional?: boolean;
+}) {
+    const session = await getClientSession();
+    if (!session) return { success: false, error: "No autenticado" };
+
+    const [currentClient] = await db
+        .select()
+        .from(clients)
+        .where(eq(clients.id, session.clientId))
+        .limit(1);
+
+    if (!currentClient) return { success: false, error: "Cliente no encontrado" };
+
+    if (data.username && data.username !== currentClient.username) {
+        const [existing] = await db
+            .select()
+            .from(clients)
+            .where(eq(clients.username, data.username))
+            .limit(1);
+
+        if (existing && existing.id !== session.clientId) {
+            return { success: false, error: "Nombre de usuario ya en uso" };
+        }
+
+        // Logic for 2 name changes per membership year
+        const registrationDate = currentClient.createdAt;
+        const now = new Date();
+
+        let membershipYearStart = new Date(registrationDate);
+        membershipYearStart.setFullYear(now.getFullYear());
+
+        if (now < membershipYearStart) {
+            membershipYearStart.setFullYear(now.getFullYear() - 1);
+        }
+
+        let membershipYearEnd = new Date(membershipYearStart);
+        membershipYearEnd.setFullYear(membershipYearStart.getFullYear() + 1);
+
+        const pastChangesInYear = await db
+            .select()
+            .from(nameChangesHistory)
+            .where(
+                and(
+                    eq(nameChangesHistory.clientId, session.clientId),
+                    gte(nameChangesHistory.createdAt, membershipYearStart),
+                    lte(nameChangesHistory.createdAt, membershipYearEnd)
+                )
+            );
+
+        if (pastChangesInYear.length >= 2) {
+            return { success: false, error: "Has alcanzado el límite de 2 cambios de nombre por año de membresía." };
+        }
+    }
+
+    if (data.username && data.username !== currentClient.username) {
+        await db.transaction(async (tx) => {
+            await tx.update(clients).set(data).where(eq(clients.id, session.clientId));
+            await tx.insert(nameChangesHistory).values({
+                clientId: session.clientId,
+                oldName: currentClient.username,
+                newName: data.username as string,
+            });
+        });
+    } else {
+        await db.update(clients).set(data).where(eq(clients.id, session.clientId));
+    }
+
+    await triggerWebhook("cliente.perfil_actualizado", {
+        clientId: session.clientId,
+        username: data.username || currentClient.username,
+        avatarSvg: data.avatarSvg || currentClient.avatarSvg,
+        phone: session.phone,
+        wantsMarketing: data.wantsMarketing !== undefined ? data.wantsMarketing : currentClient.wantsMarketing,
+        wantsTransactional: data.wantsTransactional !== undefined ? data.wantsTransactional : currentClient.wantsTransactional
+    });
+
+    await db.insert(adminNotifications).values({
+        type: "client_updated_profile",
+        message: `Cliente actualizó su perfil: ${data.username || currentClient.username}`,
+        isRead: false
+    });
+
+    revalidatePath("/");
+    return { success: true };
+}
+
+// ============================================
+// NOTIFICACIONES IN-APP
+// ============================================
+
+export async function getUnreadNotificationsCount() {
+    const session = await getClientSession();
+    if (!session) return 0;
+
+    const unread = await db
+        .select()
+        .from(appNotifications)
+        .where(
+            and(
+                eq(appNotifications.clientId, session.clientId),
+                eq(appNotifications.isRead, false)
+            )
+        );
+
+    return unread.length;
+}
+
+export async function getAppNotifications() {
+    const session = await getClientSession();
+    if (!session) return [];
+
+    return db
+        .select()
+        .from(appNotifications)
+        .where(eq(appNotifications.clientId, session.clientId))
+        .orderBy(desc(appNotifications.createdAt))
+        .limit(20);
+}
+
+export async function markNotificationsAsRead() {
+    const session = await getClientSession();
+    if (!session) return { success: false };
+
+    await db
+        .update(appNotifications)
+        .set({ isRead: true })
+        .where(
+            and(
+                eq(appNotifications.clientId, session.clientId),
+                eq(appNotifications.isRead, false)
+            )
+        );
+
+    revalidatePath("/notifications");
+    return { success: true };
+}
+
+export async function logoutClient() {
+    await destroyClientSession();
+}
+
+export async function deleteMyAccount() {
+    const session = await getClientSession();
+    if (!session) return { success: false, error: "No autenticado" };
+
+    // Anonimizar username para liberarlo (otros pueden elegirlo)
+    const deletedUsername = `deleted_${session.clientId}_${Date.now()}`;
+
+    await db.update(clients).set({
+        username: deletedUsername,
+        points: 0,
+        avatarSvg: "default.svg",
+        wantsMarketing: false,
+        wantsTransactional: false,
+        wantsInAppNotifs: false,
+        deletedAt: new Date(),
+    }).where(eq(clients.id, session.clientId));
+
+    await triggerWebhook("cliente.cuenta_eliminada", {
+        clientId: session.clientId,
+        phone: session.phone,
+        username: session.username,
+        deletedAt: new Date().toISOString(),
+    });
+
+    await db.insert(adminNotifications).values({
+        type: "client_deleted",
+        message: `Cliente eliminó su cuenta: ${session.username} (${session.phone})`,
+        isRead: false,
+    });
+
+    eventBus.emit("admin_notification", {
+        type: "client_deleted",
+        message: `Cliente eliminó su cuenta: ${session.username} (${session.phone})`,
+    });
+
+    await destroyClientSession();
+    return { success: true };
+}
+
+// ============================================
+// CODIGOS QR
+// ============================================
+
+export async function validateCode(codeStr: string) {
+    const session = await getClientSession();
+    if (!session) return { success: false, error: "No autenticado" };
+
+    const result = await db
+        .select()
+        .from(codes)
+        .where(eq(codes.code, codeStr))
+        .limit(1);
+
+    if (!result.length) {
+        return { success: false, error: "Codigo no encontrado" };
+    }
+
+    const code = result[0];
+
+    if (code.status === "used") {
+        return { success: false, error: "Este codigo ya ha sido utilizado" };
+    }
+
+    const now = new Date();
+    if (now > code.expirationDate) {
+        return { success: false, error: "Este código ya ha expirado" };
+    }
+
+    return {
+        success: true,
+        pointsValue: code.pointsValue,
+    };
+}
+
+export async function redeemCode(codeStr: string) {
+    const session = await getClientSession();
+    if (!session) return { success: false, error: "No autenticado" };
+
+    const result = await db
+        .select()
+        .from(codes)
+        .where(eq(codes.code, codeStr))
+        .limit(1);
+
+    if (!result.length) {
+        await triggerWebhook("cliente.error_codigo_invalido", {
+            clientId: session.clientId,
+            username: session.username,
+            phone: session.phone,
+            code: codeStr,
+            error: "Codigo no encontrado"
+        });
+        return { success: false, error: "Codigo no encontrado" };
+    }
+
+    const code = result[0];
+
+    if (code.status === "used") {
+        await triggerWebhook("cliente.error_codigo_invalido", {
+            clientId: session.clientId,
+            username: session.username,
+            phone: session.phone,
+            code: codeStr,
+            error: "Este codigo ya ha sido utilizado"
+        });
+        return { success: false, error: "Este codigo ya ha sido utilizado" };
+    }
+
+    const now = new Date();
+    if (now > code.expirationDate) {
+        await triggerWebhook("cliente.error_codigo_invalido", {
+            clientId: session.clientId,
+            username: session.username,
+            phone: session.phone,
+            code: codeStr,
+            error: "Este código ya ha expirado"
+        });
+        return { success: false, error: "Este código ya ha expirado" };
+    }
+
+    // Transaccion ACID: marcar codigo como usado + sumar puntos
+    const transactionResult = await db.transaction(async (tx) => {
+        const updateCodeResult = await tx
+            .update(codes)
+            .set({
+                status: "used",
+                usedAt: new Date(),
+                usedByClientId: session.clientId,
+            })
+            .where(
+                and(
+                    eq(codes.id, code.id),
+                    eq(codes.status, "unused") // Atomic constraint
+                )
+            );
+
+        if (updateCodeResult[0].affectedRows === 0) {
+            throw new Error("El código ya fue reclamado por otro proceso");
+        }
+
+        await tx
+            .update(clients)
+            .set({
+                points: sql`${clients.points} + ${code.pointsValue}`,
+                lifetimePoints: sql`${clients.lifetimePoints} + ${code.pointsValue}`,
+            })
+            .where(eq(clients.id, session.clientId));
+
+        return true;
+    }).catch((e) => {
+        return false;
+    });
+
+    if (!transactionResult) {
+        return { success: false, error: "El código ya fue reclamado por otro proceso paralelo" };
+    }
+
+    // Get updated client for total points
+    const [updatedClient] = await db
+        .select()
+        .from(clients)
+        .where(eq(clients.id, session.clientId))
+        .limit(1);
+
+    await triggerWebhook("cliente.puntos_sumados", {
+        clientId: session.clientId,
+        username: session.username,
+        phone: session.phone,
+        code: codeStr,
+        pointsAdded: code.pointsValue,
+        batchName: code.batchName,
+        newTotalPoints: updatedClient?.points ?? 0
+    });
+
+    await db.insert(adminNotifications).values({
+        type: "points_added",
+        message: `Cliente sumó puntos: ${session.username} sumó ${code.pointsValue} pts (Lote: ${code.batchName})`,
+        isRead: false
+    });
+
+    if (updatedClient) {
+        const oldLifetime = updatedClient.lifetimePoints - code.pointsValue;
+
+        const pubSettings = await getPublicSettings();
+        const tierBronze = parseInt(pubSettings.tier_bronze_points || "100");
+        const tierSilver = parseInt(pubSettings.tier_silver_points || "500");
+        const tierGold = parseInt(pubSettings.tier_gold_points || "1000");
+        const tierVip = parseInt(pubSettings.tier_vip_points || "5000");
+
+        const getTier = (pts: number) => {
+            if (pts >= tierVip) return "vip";
+            if (pts >= tierGold) return "gold";
+            if (pts >= tierSilver) return "silver";
+            if (pts >= tierBronze) return "bronze";
+            return "none";
+        };
+
+        const oldTier = getTier(oldLifetime);
+        const newTier = getTier(updatedClient.lifetimePoints);
+
+        if (oldTier !== newTier) {
+            await triggerWebhook("cliente.nivel_alcanzado", {
+                clientId: session.clientId,
+                username: session.username,
+                phone: session.phone,
+                oldTier,
+                newTier,
+                lifetimePoints: updatedClient.lifetimePoints
+            });
+
+            await db.insert(appNotifications).values({
+                clientId: session.clientId,
+                title: "¡Subiste de Nivel VIP!",
+                body: `¡Felicidades! Has alcanzado el nivel ${newTier.toUpperCase()}. Disfruta de nuevos beneficios y premios exclusivos.`,
+                isRead: false,
+                type: "tier_upgraded"
+            });
+        }
+    }
+
+    await db.insert(adminNotifications).values({
+        type: "points_added",
+        message: `${session.username} sumó ${code.pointsValue} pts`,
+        isRead: false
+    });
+
+    eventBus.emit("admin_notification", {
+        type: "points_added",
+        message: `${session.username} sumó ${code.pointsValue} pts`,
+    });
+
+    revalidatePath("/");
+    return {
+        success: true,
+        pointsAdded: code.pointsValue,
+    };
+}
+
+// ============================================
+// CANJE DE PREMIOS
+// ============================================
+
+export async function getAvailableRewards() {
+    return db
+        .select()
+        .from(rewards)
+        .where(eq(rewards.status, "active"))
+        .orderBy(rewards.pointsRequired);
+}
+
+export async function requestRedemption(rewardId: number) {
+    const session = await getClientSession();
+    if (!session) return { success: false, error: "No autenticado" };
+
+    const [reward] = await db
+        .select()
+        .from(rewards)
+        .where(eq(rewards.id, rewardId))
+        .limit(1);
+
+    if (!reward) return { success: false, error: "Premio no encontrado" };
+    if (reward.status !== "active")
+        return { success: false, error: "Premio no disponible" };
+
+    const [client] = await db
+        .select()
+        .from(clients)
+        .where(eq(clients.id, session.clientId))
+        .limit(1);
+
+    if (!client) return { success: false, error: "Cliente no encontrado" };
+    if (client.points < reward.pointsRequired)
+        return { success: false, error: "Puntos insuficientes" };
+
+    const ticketUuid = randomUUID();
+
+    // Transaccion ACID: descontar puntos + crear ticket de forma Atomica
+    const transactionResult = await db.transaction(async (tx) => {
+        const updateClientResult = await tx
+            .update(clients)
+            .set({ points: sql`${clients.points} - ${reward.pointsRequired}` })
+            .where(
+                and(
+                    eq(clients.id, session.clientId),
+                    gte(clients.points, reward.pointsRequired) // Bloqueo anti-saldos negativos
+                )
+            );
+
+        if (updateClientResult[0].affectedRows === 0) {
+            throw new Error("Puntos insuficientes");
+        }
+
+        await tx.insert(redemptions).values({
+            clientId: session.clientId,
+            rewardId: rewardId,
+            ticketUuid,
+            pointsSpent: reward.pointsRequired,
+            status: "pending",
+        });
+
+        return true;
+    }).catch(e => false);
+
+    if (!transactionResult) {
+        return { success: false, error: "Tus puntos han cambiado o son insuficientes" };
+    }
+
+    // Trigger Webhook
+    await triggerWebhook("cliente.canje_solicitado", {
+        clientId: session.clientId,
+        username: session.username,
+        phone: session.phone,
+        wantsMarketing: client.wantsMarketing,
+        wantsTransactional: client.wantsTransactional,
+        rewardId,
+        rewardName: reward.name,
+        rewardType: reward.type,
+        ticketUuid,
+        pointsSpent: reward.pointsRequired,
+        remainingPoints: client.points - reward.pointsRequired
+    });
+
+    await db.insert(adminNotifications).values({
+        type: "new_redemption",
+        message: `${session.username} solicitó canjear: ${reward.name}`,
+        isRead: false
+    });
+
+    eventBus.emit("admin_notification", {
+        type: "new_redemption",
+        message: `${session.username} solicitó canjear: ${reward.name}`,
+    });
+
+    revalidatePath("/");
+    return { success: true, ticketUuid };
+}
+
+export async function getMyRedemptions() {
+    const session = await getClientSession();
+    if (!session) return [];
+
+    const rows = await db
+        .select({
+            id: redemptions.id,
+            rewardId: redemptions.rewardId,
+            ticketUuid: redemptions.ticketUuid,
+            pointsSpent: redemptions.pointsSpent,
+            status: redemptions.status,
+            createdAt: redemptions.createdAt,
+            rewardName: rewards.name,
+            rewardImageUrl: rewards.imageUrl,
+            rewardType: rewards.type,
+        })
+        .from(redemptions)
+        .leftJoin(rewards, eq(redemptions.rewardId, rewards.id))
+        .where(eq(redemptions.clientId, session.clientId))
+        .orderBy(desc(redemptions.createdAt));
+
+    return rows;
+}
+
+// ============================================
+// AVATARES SVG
+// ============================================
+
+export async function getAvailableAvatars() {
+    try {
+        const avatarsPath = join(process.cwd(), "public", "avatars");
+        const files = await readdir(avatarsPath);
+        return files.filter((f) => f.endsWith(".svg"));
+    } catch {
+        return [];
+    }
+}

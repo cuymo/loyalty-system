@@ -30,8 +30,16 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files — NUNCA subas .env al repo
 .env*
+!.env.example
+
+# uploads (contenido generado por usuarios)
+/public/uploads/*
+!/public/uploads/.gitkeep
+
+# drizzle migrations (generadas automáticamente, no necesarias en repo)
+/drizzle
 
 # vercel
 .vercel
@@ -39,3 +47,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# shadcn RAG Knowledge (archivos de desarrollo interno, no van al repo)
+/shadcn_rag_knowledge/
+
+# directivas del agente (notas internas de desarrollo)
+/directivas/
+
+# scripts de prueba temporales
+test-crm*.ts
+test-*.ts
+*.test.ts

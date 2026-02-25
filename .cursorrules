@@ -1,0 +1,24 @@
+# Instrucciones del Proyecto: Crew Zingy
+
+## Fuente de Verdad
+El archivo `README.md` en la raíz del proyecto contiene el **Prompt Arquitectónico / PRD completo** que describe cómo debe construirse esta aplicación. Incluye:
+- Visión general y flujo del cliente (User Journey)
+- Especificaciones de interfaz (PWA para clientes y CRM para administradores)
+- Lista completa de eventos y webhooks (n8n)
+- Stack tecnológico obligatorio
+- Consideraciones de seguridad (ACID, CSRF, Rate Limiting, JWT)
+- Reglas de UX/UI (Mobile First, Modo Oscuro, Modales flotantes)
+- Arquitectura de carpetas recomendada
+
+**Antes de escribir cualquier línea de código, lee y comprende completamente el `README.md`.**
+
+## Regla Crítica: Versiones de Dependencias
+**PROHIBICIÓN ESTRICTA:** No asumas ni codifiques en duro versiones específicas de paquetes o frameworks (ej. prohibido quemar `Next.js 15`, `Tailwind v4`, `Drizzle 0.30`, etc).
+
+**Siempre debes ejecutar Context7 MCP** o realizar búsquedas en la web antes de iniciar la instalación de dependencias y la escritura de código, con el único fin de asegurarte de que estás recomendando y utilizando las últimas versiones *estables* disponibles en el momento del desarrollo.
+
+## Reglas Adicionales
+- Está **estrictamente prohibido** el uso de emojis en todo el código, la interfaz y la base de datos.
+- No generes ni incluyas íconos SVG para perfiles de usuario. Esos los sube manualmente el administrador a `public/avatars/`.
+- No uses rutas absolutas quemadas (hardcoded). Usa Variables de Entorno (`.env`) para cualquier path o URL configurable.
+- Siempre que crees un archivo nuevo, agrega un comentario al inicio con: Nombre, Descripción, Fecha de creación, Autor, Fecha de modificación y Descripción de la modificación.
