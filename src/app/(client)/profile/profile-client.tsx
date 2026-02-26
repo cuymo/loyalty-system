@@ -189,6 +189,73 @@ export function ProfileClient({ client, avatars }: ProfileClientProps) {
                     />
                 </div>
 
+                {/* Programa de Referidos */}
+                <div className="space-y-4 pt-2">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest px-1">Programa de Referidos</label>
+                    <div className="bg-primary/5 border-2 border-primary/20 rounded-2xl p-5 space-y-4 shadow-sm">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-primary/10 text-primary rounded-xl shrink-0">
+                                    <Users size={20} />
+                                </div>
+                                <div className="space-y-0.5 min-w-0">
+                                    <span className="text-sm font-bold text-foreground block truncate">
+                                        Tu Código: #{client.id.toString().padStart(6, '0')}
+                                    </span>
+                                    <p className="text-[11px] text-muted-foreground leading-tight">Gana puntos invitando amigos.</p>
+                                </div>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    navigator.clipboard.writeText(client.id.toString());
+                                    const prevMsg = message;
+                                    setMessage("¡Código copiado!");
+                                    setTimeout(() => setMessage(prevMsg), 2000);
+                                }}
+                                className="h-9 sm:h-8 rounded-lg px-4 sm:px-3 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10 transition-all font-bold w-full sm:w-auto shrink-0"
+                            >
+                                <Copy size={14} />
+                                Copiar
+                            </Button>
+                        </div>
+
+                        {/* Canjear código de amigo */}
+                        {!client.referredBy && (
+                            <div className="pt-2 border-t border-primary/10 space-y-3">
+                                <p className="text-[11px] text-muted-foreground font-medium">¿Te invitó un amigo? Ingresa su código aquí:</p>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Ej: 123"
+                                        value={referralInput}
+                                        onChange={(e) => setReferralInput(e.target.value.replace(/\D/g, ""))}
+                                        className="flex-1 min-w-0 px-3 py-2 bg-background border border-border/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-inner"
+                                    />
+                                    <Button
+                                        size="sm"
+                                        disabled={!referralInput || isReferralLoading}
+                                        onClick={handleApplyReferral}
+                                        className="rounded-xl px-4 font-bold shadow-sm shrink-0 h-10 sm:h-9"
+                                    >
+                                        {isReferralLoading ? "..." : "Canjear"}
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+
+                        {client.referredBy && (
+                            <div className="flex items-center gap-2 pt-1 border-t border-primary/5">
+                                <div className="p-1 bg-success/10 text-success rounded-full">
+                                    <Check size={12} />
+                                </div>
+                                <span className="text-[11px] text-success font-bold uppercase tracking-wider">¡Código de referido aplicado!</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 {/* Preferencias de Notificacion */}
                 <div className="space-y-4 pt-2 pb-2">
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest px-1">Preferencias de Notificación</label>
@@ -226,7 +293,7 @@ export function ProfileClient({ client, avatars }: ProfileClientProps) {
                                 </div>
                                 <div className="space-y-0.5">
                                     <span className="text-sm font-medium text-foreground">Marketing y Premios</span>
-                                    <p className="text-[11px] text-muted-foreground leading-tight">Campañas, novedades y días de puntos.</p>
+                                    <p className="text-[11px] text-muted-foreground leading-tight">Campaños, novedades y días de puntos.</p>
                                 </div>
                             </div>
                             <label className="flex items-center cursor-pointer">
@@ -240,100 +307,41 @@ export function ProfileClient({ client, avatars }: ProfileClientProps) {
                             </label>
                         </div>
                     </div>
-
-                    <Link
-                        href="/terms"
-                        className="bg-accent/10 border-2 border-border/50 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:border-primary/50 transition-colors group"
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-accent text-muted-foreground rounded-xl group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                                <FileText size={20} />
-                            </div>
-                            <div className="space-y-0.5">
-                                <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">Términos y Condiciones</span>
-                                <p className="text-[11px] text-muted-foreground leading-tight">Políticas del programa</p>
-                            </div>
-                        </div>
-                    </Link>
-
-                    <Link
-                        href="/privacy"
-                        className="bg-accent/10 border-2 border-border/50 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:border-primary/50 transition-colors group"
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-accent text-muted-foreground rounded-xl group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                                <Shield size={20} />
-                            </div>
-                            <div className="space-y-0.5">
-                                <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">Política de Privacidad</span>
-                                <p className="text-[11px] text-muted-foreground leading-tight">Manejo de tus datos</p>
-                            </div>
-                        </div>
-                    </Link>
                 </div>
 
-                {/* Programa de Referidos */}
+                {/* Legal Section */}
                 <div className="space-y-4 pt-2">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest px-1">Programa de Referidos</label>
-                    <div className="bg-primary/5 border-2 border-primary/20 rounded-2xl p-5 space-y-4 shadow-sm">
-                        <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest px-1">Legal</label>
+                    <div className="space-y-3">
+                        <Link
+                            href="/terms"
+                            className="bg-accent/10 border-2 border-border/50 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:border-primary/50 transition-colors group"
+                        >
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-primary/10 text-primary rounded-xl">
-                                    <Users size={20} />
+                                <div className="p-2 bg-accent text-muted-foreground rounded-xl group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                                    <FileText size={20} />
                                 </div>
                                 <div className="space-y-0.5">
-                                    <span className="text-sm font-bold text-foreground">Tu Código: {client.id}</span>
-                                    <p className="text-[11px] text-muted-foreground leading-tight">Comparte tu código y gana puntos por cada amigo que se una.</p>
+                                    <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">Términos y Condiciones</span>
+                                    <p className="text-[11px] text-muted-foreground leading-tight">Políticas del programa</p>
                                 </div>
                             </div>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                    navigator.clipboard.writeText(client.id.toString());
-                                    const prevMsg = message;
-                                    setMessage("¡Código copiado!");
-                                    setTimeout(() => setMessage(prevMsg), 2000);
-                                }}
-                                className="h-8 rounded-lg px-3 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10 transition-all font-bold"
-                            >
-                                <Copy size={14} />
-                                Copiar
-                            </Button>
-                        </div>
+                        </Link>
 
-                        {/* Canjear código de amigo */}
-                        {!client.referredBy && (
-                            <div className="pt-2 border-t border-primary/10 space-y-3">
-                                <p className="text-[11px] text-muted-foreground font-medium">¿Te invitó un amigo? Ingresa su código aquí:</p>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        placeholder="Ej: 123"
-                                        value={referralInput}
-                                        onChange={(e) => setReferralInput(e.target.value.replace(/\D/g, ""))}
-                                        className="flex-1 px-3 py-2 bg-background border border-border/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-inner"
-                                    />
-                                    <Button
-                                        size="sm"
-                                        disabled={!referralInput || isReferralLoading}
-                                        onClick={handleApplyReferral}
-                                        className="rounded-xl px-4 font-bold shadow-sm"
-                                    >
-                                        {isReferralLoading ? "..." : "Canjear"}
-                                    </Button>
+                        <Link
+                            href="/privacy"
+                            className="bg-accent/10 border-2 border-border/50 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:border-primary/50 transition-colors group"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-accent text-muted-foreground rounded-xl group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                                    <Shield size={20} />
+                                </div>
+                                <div className="space-y-0.5">
+                                    <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">Política de Privacidad</span>
+                                    <p className="text-[11px] text-muted-foreground leading-tight">Manejo de tus datos</p>
                                 </div>
                             </div>
-                        )}
-
-                        {client.referredBy && (
-                            <div className="flex items-center gap-2 pt-1 border-t border-primary/5">
-                                <div className="p-1 bg-success/10 text-success rounded-full">
-                                    <Check size={12} />
-                                </div>
-                                <span className="text-[11px] text-success font-bold uppercase tracking-wider">¡Código de referido aplicado!</span>
-                            </div>
-                        )}
+                        </Link>
                     </div>
                 </div>
 
