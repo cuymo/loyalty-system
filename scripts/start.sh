@@ -6,7 +6,7 @@
 set -e
 
 echo "==> [1/3] Sincronizando esquema de base de datos..."
-npx drizzle-kit push --yes || echo "WARN: drizzle-kit push falló (puede ser normal si ya está sincronizada)"
+npx drizzle-kit push || echo "WARN: drizzle-kit push falló (puede ser normal si ya está sincronizada)"
 
 echo "==> [2/3] Ejecutando seed inicial (crea admin si no existe)..."
 npx tsx src/db/seed.ts || echo "WARN: seed falló (puede ser normal si el admin ya existe)"
