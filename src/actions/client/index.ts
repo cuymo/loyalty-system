@@ -108,7 +108,7 @@ export async function requestOtp(phone: string) {
     // Trigger Webhook para OTP
     await triggerWebhook("cliente.otp_solicitado", {
         phone,
-        otp: process.env.NODE_ENV === "development" ? otp : undefined,
+        otp,
         expiresInMinutes: 5,
         attempt: rateLimit.requests,
         status: "pending"
