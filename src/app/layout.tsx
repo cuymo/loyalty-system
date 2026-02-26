@@ -21,16 +21,20 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#000000",
+  themeColor: "#ffffff",
 };
 
 export const metadata: Metadata = {
   title: "Crew Zingy",
   description: "Tu programa de lealtad favorito",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/pwa-icon.svg",
+  },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "Crew Zingy",
   },
 };
