@@ -22,7 +22,7 @@ export function ClientBottomNav() {
     const pathname = usePathname();
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 bg-background/80 dark:bg-zinc-950 backdrop-blur-md border-t border-border dark:border-zinc-800 z-40 safe-area-bottom">
+        <nav className="fixed bottom-0 left-0 right-0 dark bg-zinc-950/90 backdrop-blur-md border-t border-zinc-800 z-40 safe-area-bottom">
             <div className="max-w-md mx-auto flex items-center justify-around py-3 px-2">
                 {navItems.map((item) => {
                     const isActive = pathname.startsWith(item.href);
@@ -31,8 +31,8 @@ export function ClientBottomNav() {
                             key={item.href}
                             href={item.href}
                             className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all ${isActive
-                                ? "text-foreground"
-                                : "text-muted-foreground hover:text-muted-foreground"
+                                ? "text-white"
+                                : "text-zinc-400 hover:text-white"
                                 }`}
                         >
                             <item.icon
