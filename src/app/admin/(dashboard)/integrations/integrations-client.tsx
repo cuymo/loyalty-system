@@ -100,15 +100,15 @@ export function IntegrationsClient({
     };
 
     const eventDescriptions: Record<string, string> = {
-        "cliente.registrado": "Nuevo cliente registrado via OTP",
-        "cliente.otp_solicitado": "Cliente solicita código OTP para entrar",
-        "cliente.sesion_iniciada": "Cliente inicia sesión exitosamente",
-        "cliente.puntos_sumados": "Cliente escanea un código QR y suma puntos",
-        "cliente.canje_solicitado": "Cliente solicita canjear un premio",
-        "cliente.canje_exitoso": "Admin aprueba el canje solicitado",
-        "cliente.canje_rechazado": "Admin rechaza el canje solicitado",
-        "cliente.cuenta_eliminada": "Cliente elimina su cuenta (soft delete)",
-        "cliente.cuenta_reactivada": "Cuenta eliminada se reactiva al volver a ingresar",
+        "cliente.registrado": "Nuevo cliente registrado (Solo si wantsTransactional=true)",
+        "cliente.otp_solicitado": "Cliente solicita OTP (Siempre se envía)",
+        "cliente.sesion_iniciada": "Sesión iniciada (Solo si wantsTransactional=true)",
+        "cliente.puntos_sumados": "Suma puntos por QR (Solo si wantsTransactional=true)",
+        "cliente.canje_solicitado": "Solicita premio (Solo si wantsTransactional=true)",
+        "cliente.canje_exitoso": "Canje aprobado (Solo si wantsTransactional=true)",
+        "cliente.canje_rechazado": "Canje rechazado (Solo si wantsTransactional=true)",
+        "cliente.cuenta_eliminada": "Soft delete cuenta (Solo si wantsTransactional=true)",
+        "cliente.cuenta_reactivada": "Cuenta reactivada (Solo si wantsTransactional=true)",
         "admin.premio_creado": "Nuevo premio creado en el catálogo",
         "admin.lote_codigos_generado": "Nuevo lote de códigos QR generado",
         "admin.notificacion_custom_whatsapp": "Mensaje personalizado enviado a clientes",
@@ -239,6 +239,10 @@ export function IntegrationsClient({
                             >
                                 <X size={20} />
                             </Button>
+                        </div>
+
+                        <div className="bg-warning/10 text-warning px-4 py-3 rounded-lg border border-warning/30 text-sm">
+                            <strong>Nota Importante:</strong> Para proteger la privacidad, todos los webhooks informativos de clientes hacia WhatsApp están ahora condicionados y <strong>SOLO</strong> se dispararán hacia n8n si el cliente otorgó el permiso (<code>wantsTransactional</code> activado en su perfil). El <strong>único</strong> webhook incondicional es el de solicitar OTP. Todos los eventos quedan en el buzón In-App sin importar esta configuración.
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm items-start overflow-hidden flex-1">
