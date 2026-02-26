@@ -133,7 +133,7 @@ export default function ClientLoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <div className="h-[100dvh] flex items-center justify-center bg-background overflow-hidden px-4">
             <div className="w-full max-w-sm space-y-8">
                 {/* Header */}
                 <div className="text-center space-y-2">

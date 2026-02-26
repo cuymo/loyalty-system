@@ -46,7 +46,7 @@ export default function AdminLoginPage() {
 
     return (
         <SessionProvider>
-            <div className="min-h-screen flex items-center justify-center bg-background">
+            <div className="h-[100dvh] flex items-center justify-center bg-background overflow-hidden px-4">
                 <div className="w-full max-w-md p-8 space-y-6 bg-card rounded-2xl border border-border">
                     <div className="text-center space-y-2">
                         <h1 className="text-2xl font-bold text-foreground">Crew Zingy</h1>
