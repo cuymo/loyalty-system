@@ -689,16 +689,30 @@ export async function approveRedemption(redemptionId: number) {
         .where(eq(rewards.id, redemption.rewardId))
         .limit(1);
 
-    await triggerWebhook("cliente.canje_exitoso", {
-        ticketUuid: redemption.ticketUuid,
-        clientId: redemption.clientId,
-        username: client?.username || "Desconocido",
-        phone: client?.phone || "",
-        rewardId: redemption.rewardId,
-        rewardName: reward?.name || "Desconocido",
-        pointsSpent: redemption.pointsSpent,
-        status: "approved"
-    });
+    // Siempre In-App
+    if (client) {
+        await db.insert(appNotifications).values({
+            clientId: client.id,
+            title: "¡Canje Aprobado!",
+            body: `Tu solicitud de canje por "${reward?.name || 'Desconocido'}" ha sido aprobada. ¡Disfrútalo!`,
+            isRead: false,
+            type: "redemption_approved"
+        });
+
+        // Opcional por WhatsApp
+        if (client.wantsTransactional) {
+            await triggerWebhook("cliente.canje_exitoso", {
+                ticketUuid: redemption.ticketUuid,
+                clientId: redemption.clientId,
+                username: client.username || "Desconocido",
+                phone: client.phone || "",
+                rewardId: redemption.rewardId,
+                rewardName: reward?.name || "Desconocido",
+                pointsSpent: redemption.pointsSpent,
+                status: "approved"
+            });
+        }
+    }
 
     await db.insert(adminNotifications).values({
         type: "admin_approved_redemption",
@@ -746,17 +760,31 @@ export async function rejectRedemption(redemptionId: number, reason?: string) {
         .where(eq(rewards.id, redemption.rewardId))
         .limit(1);
 
-    await triggerWebhook("cliente.canje_rechazado", {
-        ticketUuid: redemption.ticketUuid,
-        clientId: redemption.clientId,
-        username: client?.username || "Desconocido",
-        phone: client?.phone || "",
-        rewardId: redemption.rewardId,
-        rewardName: reward?.name || "Desconocido",
-        pointsSpent: redemption.pointsSpent,
-        reason: reason || "Rechazado por el administrador",
-        status: "rejected"
-    });
+    // Siempre In-App
+    if (client) {
+        await db.insert(appNotifications).values({
+            clientId: client.id,
+            title: "Canje Rechazado",
+            body: `Tu solicitud de canje por "${reward?.name || 'Desconocido'}" fue rechazada. Motivo: ${reason || 'Contacta soporte'}. Tus puntos (${redemption.pointsSpent}) han sido devueltos.`,
+            isRead: false,
+            type: "redemption_rejected"
+        });
+
+        // Opcional por WhatsApp
+        if (client.wantsTransactional) {
+            await triggerWebhook("cliente.canje_rechazado", {
+                ticketUuid: redemption.ticketUuid,
+                clientId: redemption.clientId,
+                username: client.username || "Desconocido",
+                phone: client.phone || "",
+                rewardId: redemption.rewardId,
+                rewardName: reward?.name || "Desconocido",
+                pointsSpent: redemption.pointsSpent,
+                reason: reason || "Rechazado por el administrador",
+                status: "rejected"
+            });
+        }
+    }
 
     await db.insert(adminNotifications).values({
         type: "admin_rejected_redemption",

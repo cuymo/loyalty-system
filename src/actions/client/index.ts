@@ -83,12 +83,27 @@ export async function requestOtp(phone: string) {
         rateLimit.verifyAttempts = 0;
         rateLimitStore.set(phone, rateLimit);
 
+        // Buscar cliente para ver si quiere transaccionales
+        const [existingClient] = await db.select().from(clients).where(eq(clients.phone, phone)).limit(1);
+
+        if (existingClient) {
+            await db.insert(appNotifications).values({
+                clientId: existingClient.id,
+                title: "Alerta de Seguridad",
+                body: "Tu cuenta ha sido bloqueada por 15 minutos debido a demasiadas solicitudes de código.",
+                isRead: false,
+                type: "security_alert"
+            });
+        }
+
         // Disparar webhook de bloqueo
-        await triggerWebhook("cliente.cuenta_bloqueada", {
-            phone,
-            razon: "Límite de envíos excedido (3/3)",
-            bloqueadoHasta: new Date(rateLimit.lockedUntil).toISOString()
-        });
+        if (existingClient?.wantsTransactional ?? true) {
+            await triggerWebhook("cliente.cuenta_bloqueada", {
+                phone,
+                razon: "Límite de envíos excedido (3/3)",
+                bloqueadoHasta: new Date(rateLimit.lockedUntil).toISOString()
+            });
+        }
 
         return { success: false, error: "Límite de envíos agotado. Bloqueado por 15 minutos.", isLocked: true };
     }
@@ -147,11 +162,25 @@ export async function verifyOtp(phone: string, otp: string) {
             otpStore.delete(phone); // Invalidar código actual
 
             // Disparar webhook de bloqueo por mala digitación
-            await triggerWebhook("cliente.cuenta_bloqueada", {
-                phone,
-                razon: "Demasiados intentos de verificación fallidos (3/3)",
-                bloqueadoHasta: new Date(rateLimit.lockedUntil).toISOString()
-            });
+            const [existingClient] = await db.select().from(clients).where(eq(clients.phone, phone)).limit(1);
+
+            if (existingClient) {
+                await db.insert(appNotifications).values({
+                    clientId: existingClient.id,
+                    title: "Alerta de Seguridad",
+                    body: "Tu cuenta ha sido bloqueada temporalmente por demasiados intentos de código fallidos.",
+                    isRead: false,
+                    type: "security_alert"
+                });
+            }
+
+            if (existingClient?.wantsTransactional ?? true) {
+                await triggerWebhook("cliente.cuenta_bloqueada", {
+                    phone,
+                    razon: "Demasiados intentos de verificación fallidos (3/3)",
+                    bloqueadoHasta: new Date(rateLimit.lockedUntil).toISOString()
+                });
+            }
 
             return { success: false, error: "Demasiados intentos fallidos. Intentos bloqueados por 15 minutos." };
         }
@@ -184,11 +213,13 @@ export async function verifyOtp(phone: string, otp: string) {
                 wantsTransactional: true,
             }).where(eq(clients.id, existingClient.id));
 
-            await triggerWebhook("cliente.cuenta_reactivada", {
-                clientId: existingClient.id,
-                phone,
-                reactivatedAt: new Date().toISOString(),
-            });
+            if (existingClient.wantsTransactional) {
+                await triggerWebhook("cliente.cuenta_reactivada", {
+                    clientId: existingClient.id,
+                    phone,
+                    reactivatedAt: new Date().toISOString(),
+                });
+            }
 
             await db.insert(adminNotifications).values({
                 type: "client_reactivated",
@@ -223,13 +254,15 @@ export async function verifyOtp(phone: string, otp: string) {
         });
 
         // Trigger Webhook
-        await triggerWebhook("cliente.sesion_iniciada", {
-            clientId: existingClient.id,
-            phone: existingClient.phone,
-            username: existingClient.username,
-            points: existingClient.points,
-            avatarSvg: existingClient.avatarSvg
-        });
+        if (existingClient.wantsTransactional) {
+            await triggerWebhook("cliente.sesion_iniciada", {
+                clientId: existingClient.id,
+                phone: existingClient.phone,
+                username: existingClient.username,
+                points: existingClient.points,
+                avatarSvg: existingClient.avatarSvg
+            });
+        }
 
         return { success: true, isNew: false };
     }
@@ -288,14 +321,16 @@ export async function registerClient(data: {
             username: data.username,
         });
 
-        await triggerWebhook("cliente.cuenta_reactivada", {
-            clientId: existingPhone.id,
-            phone: data.phone,
-            username: data.username,
-            avatarSvg: data.avatarSvg,
-            reactivated: true,
-            createdAt: new Date().toISOString()
-        });
+        if (data.wantsTransactional ?? true) {
+            await triggerWebhook("cliente.cuenta_reactivada", {
+                clientId: existingPhone.id,
+                phone: data.phone,
+                username: data.username,
+                avatarSvg: data.avatarSvg,
+                reactivated: true,
+                createdAt: new Date().toISOString()
+            });
+        }
 
         // Insert persistent login notification for security tracking
         await db.insert(appNotifications).values({
@@ -379,14 +414,16 @@ export async function registerClient(data: {
             })
             .where(eq(clients.id, referrerData.id));
 
-        await triggerWebhook("cliente.referido", {
-            referrerId: referrerData.id,
-            referrerUsername: referrerData.username,
-            newClientId: newClient.id,
-            newClientUsername: data.username,
-            pointsAwardedToReferrer: pointsToAdd,
-            pointsAwardedToReferred: referralBonusReferred
-        });
+        if (referrerData.wantsTransactional) {
+            await triggerWebhook("cliente.referido", {
+                referrerId: referrerData.id,
+                referrerUsername: referrerData.username,
+                newClientId: newClient.id,
+                newClientUsername: data.username,
+                pointsAwardedToReferrer: pointsToAdd,
+                pointsAwardedToReferred: referralBonusReferred
+            });
+        }
 
         if (pointsToAdd > 0) {
             await db.insert(appNotifications).values({
@@ -406,25 +443,29 @@ export async function registerClient(data: {
     });
 
     // Trigger Webhook de Registro
-    await triggerWebhook("cliente.registrado", {
-        clientId: newClient.id,
-        phone: data.phone,
-        username: data.username,
-        avatarSvg: data.avatarSvg,
-        referredByCode: validReferrer ? data.referredByCode : null,
-        bonusAwarded: referralBonusReferred,
-        timestamp: new Date().toISOString()
-    });
+    if (data.wantsTransactional ?? true) {
+        await triggerWebhook("cliente.registrado", {
+            clientId: newClient.id,
+            phone: data.phone,
+            username: data.username,
+            avatarSvg: data.avatarSvg,
+            referredByCode: validReferrer ? data.referredByCode : null,
+            bonusAwarded: referralBonusReferred,
+            timestamp: new Date().toISOString()
+        });
+    }
 
     // Trigger Webhook de Sesión (con flag de nuevo registro)
-    await triggerWebhook("cliente.sesion_iniciada", {
-        clientId: newClient.id,
-        phone: data.phone,
-        username: data.username,
-        avatarSvg: data.avatarSvg,
-        isNewRegistration: true,
-        timestamp: new Date().toISOString()
-    });
+    if (data.wantsTransactional ?? true) {
+        await triggerWebhook("cliente.sesion_iniciada", {
+            clientId: newClient.id,
+            phone: data.phone,
+            username: data.username,
+            avatarSvg: data.avatarSvg,
+            isNewRegistration: true,
+            timestamp: new Date().toISOString()
+        });
+    }
 
     // Insert persistent login notification for security tracking
     await db.insert(appNotifications).values({
@@ -529,15 +570,17 @@ export async function applyReferralCode(code: string) {
                 });
             }
 
-            await triggerWebhook("cliente.referido", {
-                referrerId,
-                referrerUsername: referrer.username,
-                newClientId: session.clientId,
-                newClientUsername: client.username,
-                pointsAwardedToReferrer: pointsForReferrer,
-                pointsAwardedToReferred: bonusReferred,
-                isPostRegistration: true
-            });
+            if (referrer.wantsTransactional || client.wantsTransactional) {
+                await triggerWebhook("cliente.referido", {
+                    referrerId,
+                    referrerUsername: referrer.username,
+                    newClientId: session.clientId,
+                    newClientUsername: client.username,
+                    pointsAwardedToReferrer: pointsForReferrer,
+                    pointsAwardedToReferred: bonusReferred,
+                    isPostRegistration: true
+                });
+            }
         });
 
         revalidatePath("/");
@@ -702,14 +745,18 @@ export async function updateClientProfile(data: {
         await db.update(clients).set(data).where(eq(clients.id, session.clientId));
     }
 
-    await triggerWebhook("cliente.perfil_actualizado", {
-        clientId: session.clientId,
-        username: data.username || currentClient.username,
-        avatarSvg: data.avatarSvg || currentClient.avatarSvg,
-        phone: session.phone,
-        wantsMarketing: data.wantsMarketing !== undefined ? data.wantsMarketing : currentClient.wantsMarketing,
-        wantsTransactional: data.wantsTransactional !== undefined ? data.wantsTransactional : currentClient.wantsTransactional
-    });
+    if (data.wantsTransactional !== undefined ? data.wantsTransactional : currentClient.wantsTransactional) {
+        await triggerWebhook("cliente.perfil_actualizado", {
+            clientId: session.clientId,
+            username: data.username || currentClient.username,
+            avatarSvg: data.avatarSvg || currentClient.avatarSvg,
+            phone: session.phone,
+            wantsMarketing: data.wantsMarketing !== undefined ? data.wantsMarketing : currentClient.wantsMarketing,
+            wantsTransactional: data.wantsTransactional !== undefined ? data.wantsTransactional : currentClient.wantsTransactional
+        });
+    }
+
+
 
     await db.insert(adminNotifications).values({
         type: "client_updated_profile",
@@ -783,6 +830,8 @@ export async function deleteMyAccount() {
     // Anonimizar username para liberarlo (otros pueden elegirlo)
     const deletedUsername = `deleted_${session.clientId}_${Date.now()}`;
 
+    const [c] = await db.select().from(clients).where(eq(clients.id, session.clientId)).limit(1);
+
     await db.update(clients).set({
         username: deletedUsername,
         points: 0,
@@ -793,12 +842,14 @@ export async function deleteMyAccount() {
         deletedAt: new Date(),
     }).where(eq(clients.id, session.clientId));
 
-    await triggerWebhook("cliente.cuenta_eliminada", {
-        clientId: session.clientId,
-        phone: session.phone,
-        username: session.username,
-        deletedAt: new Date().toISOString(),
-    });
+    if (c?.wantsTransactional) {
+        await triggerWebhook("cliente.cuenta_eliminada", {
+            clientId: session.clientId,
+            phone: session.phone,
+            username: session.username,
+            deletedAt: new Date().toISOString(),
+        });
+    }
 
     await db.insert(adminNotifications).values({
         type: "client_deleted",
@@ -861,38 +912,17 @@ export async function redeemCode(codeStr: string) {
         .limit(1);
 
     if (!result.length) {
-        await triggerWebhook("cliente.error_codigo_invalido", {
-            clientId: session.clientId,
-            username: session.username,
-            phone: session.phone,
-            code: codeStr,
-            error: "Codigo no encontrado"
-        });
         return { success: false, error: "Codigo no encontrado" };
     }
 
     const code = result[0];
 
     if (code.status === "used") {
-        await triggerWebhook("cliente.error_codigo_invalido", {
-            clientId: session.clientId,
-            username: session.username,
-            phone: session.phone,
-            code: codeStr,
-            error: "Este codigo ya ha sido utilizado"
-        });
         return { success: false, error: "Este codigo ya ha sido utilizado" };
     }
 
     const now = new Date();
     if (now > code.expirationDate) {
-        await triggerWebhook("cliente.error_codigo_invalido", {
-            clientId: session.clientId,
-            username: session.username,
-            phone: session.phone,
-            code: codeStr,
-            error: "Este código ya ha expirado"
-        });
         return { success: false, error: "Este código ya ha expirado" };
     }
 
@@ -940,14 +970,26 @@ export async function redeemCode(codeStr: string) {
         .where(eq(clients.id, session.clientId))
         .limit(1);
 
-    await triggerWebhook("cliente.puntos_sumados", {
+    // Opcional por WhatsApp (Transaccional)
+    if (updatedClient?.wantsTransactional) {
+        await triggerWebhook("cliente.puntos_sumados", {
+            clientId: session.clientId,
+            username: session.username,
+            phone: session.phone,
+            code: codeStr,
+            pointsAdded: code.pointsValue,
+            batchName: code.batchName,
+            newTotalPoints: updatedClient.points
+        });
+    }
+
+    // Siempre notificar In-App
+    await db.insert(appNotifications).values({
         clientId: session.clientId,
-        username: session.username,
-        phone: session.phone,
-        code: codeStr,
-        pointsAdded: code.pointsValue,
-        batchName: code.batchName,
-        newTotalPoints: updatedClient?.points ?? 0
+        title: "¡Puntos Sumados!",
+        body: `Has sumado ${code.pointsValue} puntos. Tu nuevo total es ${updatedClient?.points ?? 0} pts.`,
+        isRead: false,
+        type: "points_added"
     });
 
     await db.insert(adminNotifications).values({
@@ -977,14 +1019,16 @@ export async function redeemCode(codeStr: string) {
         const newTier = getTier(updatedClient.lifetimePoints);
 
         if (oldTier !== newTier) {
-            await triggerWebhook("cliente.nivel_alcanzado", {
-                clientId: session.clientId,
-                username: session.username,
-                phone: session.phone,
-                oldTier,
-                newTier,
-                lifetimePoints: updatedClient.lifetimePoints
-            });
+            if (updatedClient.wantsTransactional) {
+                await triggerWebhook("cliente.nivel_alcanzado", {
+                    clientId: session.clientId,
+                    username: session.username,
+                    phone: session.phone,
+                    oldTier,
+                    newTier,
+                    lifetimePoints: updatedClient.lifetimePoints
+                });
+            }
 
             await db.insert(appNotifications).values({
                 clientId: session.clientId,
@@ -1083,20 +1127,31 @@ export async function requestRedemption(rewardId: number) {
         return { success: false, error: "Tus puntos han cambiado o son insuficientes" };
     }
 
-    // Trigger Webhook
-    await triggerWebhook("cliente.canje_solicitado", {
+    // Siempre In-App
+    await db.insert(appNotifications).values({
         clientId: session.clientId,
-        username: session.username,
-        phone: session.phone,
-        wantsMarketing: client.wantsMarketing,
-        wantsTransactional: client.wantsTransactional,
-        rewardId,
-        rewardName: reward.name,
-        rewardType: reward.type,
-        ticketUuid,
-        pointsSpent: reward.pointsRequired,
-        remainingPoints: client.points - reward.pointsRequired
+        title: "Solicitud de Canje",
+        body: `Has solicitado canjear: ${reward.name}. Descontamos ${reward.pointsRequired} pts. Tu solicitud está pendiente de aprobación.`,
+        isRead: false,
+        type: "redemption_requested"
     });
+
+    // Opcional por WhatsApp (Transaccional)
+    if (client.wantsTransactional) {
+        await triggerWebhook("cliente.canje_solicitado", {
+            clientId: session.clientId,
+            username: session.username,
+            phone: session.phone,
+            wantsMarketing: client.wantsMarketing,
+            wantsTransactional: client.wantsTransactional,
+            rewardId,
+            rewardName: reward.name,
+            rewardType: reward.type,
+            ticketUuid,
+            pointsSpent: reward.pointsRequired,
+            remainingPoints: client.points - reward.pointsRequired
+        });
+    }
 
     await db.insert(adminNotifications).values({
         type: "new_redemption",
