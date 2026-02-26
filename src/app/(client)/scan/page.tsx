@@ -97,7 +97,7 @@ export default function ScanPage() {
                         placeholder="CZABC123"
                         disabled={isLoading}
                         style={{ textTransform: "uppercase" }}
-                        className="w-full pl-14 pr-4 py-5 bg-card/50 backdrop-blur-sm border-2 border-border/50 rounded-2xl text-foreground text-xl font-mono tracking-[0.2em] placeholder:tracking-normal placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 disabled:opacity-50 transition-all text-center shadow-sm"
+                        className="w-full pl-14 pr-14 py-5 bg-card/50 backdrop-blur-sm border-2 border-border/50 rounded-2xl text-foreground text-xl font-mono tracking-[0.2em] placeholder:tracking-normal placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 disabled:opacity-50 transition-all text-center shadow-sm"
                     />
                 </div>
                 <Button

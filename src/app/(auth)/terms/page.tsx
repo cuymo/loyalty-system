@@ -69,7 +69,7 @@ export default function TermsPage() {
                         <p>
                             Los puntos acumulados pueden canjearse por los premios disponibles en
                             el catálogo. Los canjes están sujetos a disponibilidad y requieren
-                            aprobación del establecimiento. Una vez aprobado un canje, los puntos
+                            aprobación del establecimiento. <strong>Un premio solo puede ser canjeado y entregado en conjunto con una compra física en el local</strong> (por ejemplo, si canjeas una camiseta, se te entregará en tu próxima compra). Una vez aprobado un canje, los puntos
                             correspondientes serán descontados de tu saldo de forma permanente.
                         </p>
                     </section>
