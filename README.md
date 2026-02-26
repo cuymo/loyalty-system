@@ -13,7 +13,7 @@
 | UI           | shadcn/ui + Tailwind v4                    |
 | Push Notifs  | Web Push API (VAPID)                       |
 | Webhooks     | HTTP POST hacia n8n u otros               |
-| Despliegue   | Docker + Docker Compose                    |
+| Despliegue   | Dockerfile + **Dokploy**                   |
 
 ---
 
@@ -31,7 +31,7 @@ cp .env.example .env
 # 3. Instalar dependencias
 npm install
 
-# 4. Levantar base de datos
+# 4. Levantar base de datos local
 docker compose -f docker-compose.db.yml up -d
 
 # 5. Sincronizar esquema
@@ -50,23 +50,17 @@ Accede a:
 
 ---
 
-## 🚀 Producción en Docker (VPS)
+## 🚀 Producción Centralizada (VPS Dokploy)
 
-```bash
-# 1. Configura .env con tus datos de producción
-cp .env.example .env
-nano .env
+Crew Zingy está altamente optimizado para ser desplegado en plataformas PaaS auto-alojadas como **Dokploy**. 
 
-# 2. Levantar todo el stack (MySQL + App + Adminer)
-docker compose up -d --build
-```
+El repositorio contiene un `Dockerfile` *multi-stage* robusto, equipado con un `start.sh` que se encarga automáticamente de sincronizar tu base de datos y crear el usuario de inicialización sin esfuerzo manual por consola CLI.
 
-El contenedor de la app automáticamente:
-1. Sincroniza el esquema de BD con `drizzle-kit push`
-2. Crea el admin inicial con `seed.ts`
-3. Arranca Next.js en el puerto 3000 (mapeado al `APP_PORT` en `.env`)
-
-Configura tu Nginx / Traefik apuntando a `http://localhost:$APP_PORT`.
+### Resumen Rápido (Ver `INSTRUCCIONES.md` para detalles)
+1. **Instancia una MySQL** en tu panel de Dokploy.
+2. **Crea una nueva App** conectando a este Repositorio GitHub. Modo de construcción `Dockerfile`.
+3. **Agrega las Variables de Entorno** (Asegurándote que el `DATABASE_URL` apunte al "Internal Host" que Dokploy generó para MySQL).
+4. Dale al botón de **Deploy**. Dokploy configurará SSL mediante Traefik automáticamente.
 
 ---
 
