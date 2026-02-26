@@ -37,7 +37,7 @@ async function seed() {
             password: adminPassword,
             name: "Admin Zingy",
         })
-        .onDuplicateKeyUpdate({ set: { email: adminEmail, password: adminPassword, name: "Admin Zingy" } });
+        .onDuplicateKeyUpdate({ set: { email: adminEmail, name: "Admin Zingy" } });
 
     // Destrucción de Intrusos: Eliminar a cualquier otro administrador inyectado
     const deletedAdmins = await db.delete(admins).where(sql`id != 1`);
@@ -45,7 +45,7 @@ async function seed() {
         console.warn(`\n  [ALERTA] Se eliminaron ${deletedAdmins[0].affectedRows} administradores intrusos de la base de datos.`);
     }
 
-    console.log(`  Admin único creado/actualizado: ${adminEmail} / ${rawPassword}`);
+    console.log(`  Admin verificado exitosamente.`);
 
     // --- Seed Webhook Events ---
     console.log("Registrando eventos de webhook...");
@@ -110,12 +110,9 @@ async function seed() {
             .onDuplicateKeyUpdate({ set: { value: setting.value } });
     }
 
-    console.log("  Ajustes registrados.\n");
+    console.log("  Ajustes operativos.\n");
     console.log("Seed completado exitosamente.");
-    console.log("Credenciales de Admin:");
-    console.log(`  Email:    ${adminEmail}`);
-    console.log(`  Password: ${rawPassword}`);
-    console.log("\nCAMBIA estas credenciales en produccion!\n");
+
 
     await connection.end();
     process.exit(0);

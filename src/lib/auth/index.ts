@@ -25,6 +25,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 const email = credentials.email as string;
                 const password = credentials.password as string;
 
+                console.log(`[AUTH] Intento de login para: ${email}`);
+
                 const [admin] = await db
                     .select()
                     .from(admins)
@@ -32,14 +34,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     .limit(1);
 
                 if (!admin) {
+                    console.warn(`[AUTH] Admin no encontrado: ${email}`);
                     return null;
                 }
 
+                console.log(`[AUTH] Admin encontrado, verificando password...`);
                 const isPasswordValid = await bcrypt.compare(password, admin.password);
 
                 if (!isPasswordValid) {
+                    console.warn(`[AUTH] Password inválido para: ${email}`);
                     return null;
                 }
+
+                console.log(`[AUTH] Login exitoso para: ${admin.email}`);
+
 
                 // Registrar inicio de sesion en el historial y disparar webhook
                 try {

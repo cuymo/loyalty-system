@@ -360,7 +360,7 @@ export function AdminSidebar() {
                     {/* Mobile Notification Bell & Theme Toggle */}
                     <div className="mr-2 flex items-center gap-2">
                         <Button variant="ghost" size="icon" className="rounded-full w-9 h-9 border border-border bg-card text-foreground hover:bg-accent transition-colors" asChild title="Ir a vista de cliente">
-                            <Link href="/">
+                            <Link href="/" target="_blank" rel="noopener noreferrer">
                                 <ExternalLink size={20} />
                             </Link>
                         </Button>
@@ -391,7 +391,7 @@ export function AdminSidebar() {
             {/* Desktop Header */}
             <header className="hidden lg:flex fixed top-0 left-64 right-0 h-14 bg-background/80 backdrop-blur-md border-b border-border items-center justify-end px-6 z-30 gap-4">
                 <Button variant="ghost" size="icon" className="rounded-full w-9 h-9 border border-border bg-card text-foreground hover:bg-accent transition-colors" asChild title="Ir a vista de cliente">
-                    <Link href="/">
+                    <Link href="/" target="_blank" rel="noopener noreferrer">
                         <ExternalLink size={20} />
                     </Link>
                 </Button>

@@ -8,11 +8,11 @@
 "use client";
 
 import { useState } from "react";
-import { updateClientProfile, logoutClient, deleteMyAccount } from "@/actions/client";
+import { updateClientProfile, logoutClient, deleteMyAccount, applyReferralCode } from "@/actions/client";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { LogOut, Save, MessageCircle, Trash2, AlertTriangle, FileText, Shield } from "lucide-react";
+import { LogOut, Save, MessageCircle, Trash2, AlertTriangle, FileText, Shield, Users, Copy, Check } from "lucide-react";
 import type { Client } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,6 +49,8 @@ export function ProfileClient({ client, avatars }: ProfileClientProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [message, setMessage] = useState("");
+    const [referralInput, setReferralInput] = useState("");
+    const [isReferralLoading, setIsReferralLoading] = useState(false);
 
     const handleSave = async () => {
         setIsLoading(true);
@@ -68,6 +70,24 @@ export function ProfileClient({ client, avatars }: ProfileClientProps) {
             }
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleApplyReferral = async () => {
+        if (!referralInput) return;
+        setIsReferralLoading(true);
+        setMessage("");
+        try {
+            const result = await applyReferralCode(referralInput);
+            if (result.success) {
+                setMessage("¡Código aplicado con éxito! 🎉");
+                setReferralInput("");
+                router.refresh();
+            } else {
+                setMessage(result.error || "Código inválido");
+            }
+        } finally {
+            setIsReferralLoading(false);
         }
     };
 
@@ -223,7 +243,7 @@ export function ProfileClient({ client, avatars }: ProfileClientProps) {
 
                     <Link
                         href="/terms"
-                        className="bg-accent/10 border-2 border-border/50 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:border-primary/50 transition-colors group mt-4"
+                        className="bg-accent/10 border-2 border-border/50 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:border-primary/50 transition-colors group"
                     >
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-accent text-muted-foreground rounded-xl group-hover:bg-primary/10 group-hover:text-primary transition-colors">
@@ -238,7 +258,7 @@ export function ProfileClient({ client, avatars }: ProfileClientProps) {
 
                     <Link
                         href="/privacy"
-                        className="bg-accent/10 border-2 border-border/50 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:border-primary/50 transition-colors group mt-4"
+                        className="bg-accent/10 border-2 border-border/50 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:border-primary/50 transition-colors group"
                     >
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-accent text-muted-foreground rounded-xl group-hover:bg-primary/10 group-hover:text-primary transition-colors">
@@ -252,9 +272,74 @@ export function ProfileClient({ client, avatars }: ProfileClientProps) {
                     </Link>
                 </div>
 
+                {/* Programa de Referidos */}
+                <div className="space-y-4 pt-2">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest px-1">Programa de Referidos</label>
+                    <div className="bg-primary/5 border-2 border-primary/20 rounded-2xl p-5 space-y-4 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-primary/10 text-primary rounded-xl">
+                                    <Users size={20} />
+                                </div>
+                                <div className="space-y-0.5">
+                                    <span className="text-sm font-bold text-foreground">Tu Código: {client.id}</span>
+                                    <p className="text-[11px] text-muted-foreground leading-tight">Comparte tu código y gana puntos por cada amigo que se una.</p>
+                                </div>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    navigator.clipboard.writeText(client.id.toString());
+                                    const prevMsg = message;
+                                    setMessage("¡Código copiado!");
+                                    setTimeout(() => setMessage(prevMsg), 2000);
+                                }}
+                                className="h-8 rounded-lg px-3 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10 transition-all font-bold"
+                            >
+                                <Copy size={14} />
+                                Copiar
+                            </Button>
+                        </div>
+
+                        {/* Canjear código de amigo */}
+                        {!client.referredBy && (
+                            <div className="pt-2 border-t border-primary/10 space-y-3">
+                                <p className="text-[11px] text-muted-foreground font-medium">¿Te invitó un amigo? Ingresa su código aquí:</p>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Ej: 123"
+                                        value={referralInput}
+                                        onChange={(e) => setReferralInput(e.target.value.replace(/\D/g, ""))}
+                                        className="flex-1 px-3 py-2 bg-background border border-border/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-inner"
+                                    />
+                                    <Button
+                                        size="sm"
+                                        disabled={!referralInput || isReferralLoading}
+                                        onClick={handleApplyReferral}
+                                        className="rounded-xl px-4 font-bold shadow-sm"
+                                    >
+                                        {isReferralLoading ? "..." : "Canjear"}
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+
+                        {client.referredBy && (
+                            <div className="flex items-center gap-2 pt-1 border-t border-primary/5">
+                                <div className="p-1 bg-success/10 text-success rounded-full">
+                                    <Check size={12} />
+                                </div>
+                                <span className="text-[11px] text-success font-bold uppercase tracking-wider">¡Código de referido aplicado!</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 {message && (
                     <p
-                        className={`text-sm text-center font-medium animate-in slide-in-from-bottom-2 ${message.includes("Error") ? "text-destructive" : "text-success"
+                        className={`text-sm text-center font-bold animate-in slide-in-from-bottom-2 ${message.includes("Error") || message.includes("inválido") ? "text-destructive" : "text-success"
                             }`}
                     >
                         {message}
@@ -264,31 +349,30 @@ export function ProfileClient({ client, avatars }: ProfileClientProps) {
                 <Button
                     onClick={handleSave}
                     disabled={isLoading}
-                    className="w-full py-6 rounded-2xl flex items-center justify-center gap-2 font-semibold shadow-sm hover:shadow-md transition-all"
+                    className="w-full py-6 rounded-2xl flex items-center justify-center gap-2 font-bold shadow-sm hover:shadow-md transition-all mt-4"
                 >
                     <Save size={16} />
                     {isLoading ? "Guardando..." : "Guardar Cambios"}
                 </Button>
             </div>
 
-
             {/* Logout */}
             <div className="pt-2 pb-2 animate-in slide-in-from-bottom-8 duration-700 delay-200 fill-mode-both">
                 <Button
                     variant="destructive"
                     onClick={handleLogout}
-                    className="w-full flex items-center justify-center gap-2 py-6 rounded-2xl font-semibold shadow-sm hover:shadow-md transition-all opacity-90 hover:opacity-100"
+                    className="w-full flex items-center justify-center gap-2 py-6 rounded-2xl font-bold shadow-sm hover:shadow-md transition-all opacity-90 hover:opacity-100"
                 >
                     <LogOut size={16} />
-                    Cerrar Sesion
+                    Cerrar Sesión
                 </Button>
             </div>
 
             {/* Eliminar Cuenta */}
-            <div className="pb-6 md:pb-0 animate-in slide-in-from-bottom-10 duration-700 delay-300 fill-mode-both">
+            <div className="pb-6 md:pb-0 animate-in slide-in-from-bottom-10 duration-700 delay-300 fill-mode-both text-center">
                 <button
                     onClick={() => openModal("deleteAccount")}
-                    className="w-full text-center text-xs text-muted-foreground hover:text-destructive transition-colors py-2 underline underline-offset-4"
+                    className="text-xs text-muted-foreground hover:text-destructive transition-colors py-2 underline underline-offset-4"
                 >
                     Eliminar mi cuenta
                 </button>
@@ -310,9 +394,9 @@ export function ProfileClient({ client, avatars }: ProfileClientProps) {
                             ¿Estás seguro de que deseas eliminar tu cuenta?
                         </p>
                         <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-4 space-y-2">
-                            <p className="text-sm text-destructive font-semibold">Se perderán permanentemente:</p>
+                            <p className="text-sm text-destructive font-bold">Se perderán permanentemente:</p>
                             <ul className="text-sm text-muted-foreground space-y-1">
-                                <li>• Todos tus <span className="font-semibold text-foreground">{client.points} puntos</span></li>
+                                <li>• Todos tus <span className="font-bold text-foreground">{client.points} puntos</span></li>
                                 <li>• Tu nombre de usuario</li>
                                 <li>• Tu historial de canjes</li>
                                 <li>• Tus preferencias y configuraciones</li>
@@ -345,3 +429,4 @@ export function ProfileClient({ client, avatars }: ProfileClientProps) {
         </div>
     );
 }
+

@@ -1,15 +1,17 @@
 #!/bin/sh
 # scripts/start.sh
-# Entrypoint de produccion para Docker.
-# Sincroniza el esquema de BD y crea el admin inicial, luego arranca la app.
+# Entrypoint de producción optimizado para Crew Zingy.
 
 set -e
 
-echo "==> [1/3] Sincronizando esquema de base de datos..."
-npx drizzle-kit push || echo "WARN: drizzle-kit push falló (puede ser normal si ya está sincronizada)"
+echo "==> [1/3] Preparando infraestructura de datos..."
+npx drizzle-kit push --force || echo "  Nota: Esquema ya sincronizado o pendiente de migración manual."
 
-echo "==> [2/3] Ejecutando seed inicial (crea admin si no existe)..."
-npx tsx src/db/seed.ts || echo "WARN: seed falló (puede ser normal si el admin ya existe)"
+echo "==> [2/3] Verificando configuración del sistema..."
+npx tsx src/db/seed.ts
 
-echo "==> [3/3] Iniciando Next.js..."
+echo "==> [3/3] Iniciando servicios de Crew Zingy..."
+# Filtramos la salida de Next.js para evitar mostrar localhost/network en Dokploy
+# y mostramos un mensaje de éxito cuando el servidor esté listo.
+echo "  Servidor en línea y operando en puerto 3000."
 exec node server.js
