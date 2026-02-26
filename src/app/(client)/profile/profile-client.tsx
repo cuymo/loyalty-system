@@ -116,7 +116,7 @@ export function ProfileClient({ client, avatars }: ProfileClientProps) {
 
                 {/* Avatar Grid */}
                 {showAvatars && avatars.length > 0 && (
-                    <div className="grid grid-cols-5 gap-3 p-4 bg-accent/30 border border-border/40 rounded-2xl animate-in zoom-in-95 duration-300 max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+                    <div className="grid grid-cols-4 sm:grid-cols-5 gap-4 p-4 bg-accent/30 border border-border/40 rounded-2xl animate-in zoom-in-95 duration-300 max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
                         {avatars.map((avatar) => (
                             <button
                                 key={avatar}
