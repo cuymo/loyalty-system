@@ -454,7 +454,8 @@ export async function applyReferralCode(code: string) {
     const session = await getClientSession();
     if (!session) return { success: false, error: "No autenticado" };
 
-    const referrerId = parseInt(code);
+    const cleanCode = code.replace(/\D/g, "");
+    const referrerId = parseInt(cleanCode);
     if (isNaN(referrerId)) return { success: false, error: "Código inválido" };
 
     if (referrerId === session.clientId) {

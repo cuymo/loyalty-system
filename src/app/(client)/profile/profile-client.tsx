@@ -209,7 +209,8 @@ export function ProfileClient({ client, avatars }: ProfileClientProps) {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
-                                    navigator.clipboard.writeText(client.id.toString());
+                                    const paddedId = client.id.toString().padStart(6, '0');
+                                    navigator.clipboard.writeText(paddedId);
                                     const prevMsg = message;
                                     setMessage("¡Código copiado!");
                                     setTimeout(() => setMessage(prevMsg), 2000);
