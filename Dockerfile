@@ -25,6 +25,8 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV AUTH_TRUST_HOST=true
+
 
 # Usuario sin privilegios para seguridad
 RUN addgroup --system --gid 1001 nodejs && \

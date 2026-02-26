@@ -14,6 +14,7 @@ import { eq } from "drizzle-orm";
 import { triggerWebhook } from "@/lib/webhook";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+    trustHost: true,
     providers: [
         Credentials({
             name: "Admin Login",
