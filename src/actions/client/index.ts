@@ -423,18 +423,6 @@ export async function registerClient(data: {
         });
     }
 
-    // Trigger Webhook de Sesión (con flag de nuevo registro)
-    if (data.wantsTransactional ?? true) {
-        await triggerWebhook("cliente.sesion_iniciada", {
-            clientId: newClient.id,
-            phone: data.phone,
-            username: data.username,
-            avatarSvg: data.avatarSvg,
-            isNewRegistration: true,
-            timestamp: new Date().toISOString()
-        });
-    }
-
     // Insert persistent login notification for security tracking
     await db.insert(appNotifications).values({
         clientId: newClient.id,

@@ -35,6 +35,7 @@ export function RegisterForm() {
     const [avatars, setAvatars] = useState<string[]>([]);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [wantsMarketing, setWantsMarketing] = useState(true);
+    const [wantsTransactional, setWantsTransactional] = useState(false);
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
@@ -70,7 +71,7 @@ export function RegisterForm() {
                 birthDate,
                 referredByCode: referredByCode ? parseInt(referredByCode) : undefined,
                 wantsMarketing: wantsMarketing,
-                wantsTransactional: true,
+                wantsTransactional: wantsTransactional,
             });
             if (!result.success) {
                 setError(result.error || "Error al registrar");
@@ -241,6 +242,18 @@ export function RegisterForm() {
                             />
                             <label htmlFor="whatsapp" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
                                 Acepto recibir notificaciones de premios y novedades por WhatsApp
+                            </label>
+                        </div>
+
+                        <div className="flex items-start gap-3">
+                            <Checkbox
+                                id="security"
+                                checked={wantsTransactional}
+                                onCheckedChange={(checked) => setWantsTransactional(checked === true)}
+                                className="mt-0.5"
+                            />
+                            <label htmlFor="security" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+                                Acepto recibir alertas de seguridad por WhatsApp (inicios de sesión, bloqueos)
                             </label>
                         </div>
                     </div>
