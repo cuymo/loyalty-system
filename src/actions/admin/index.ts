@@ -376,11 +376,20 @@ export async function getClientById(id: number) {
 
 export async function deleteClient(id: number) {
     await requireAdminSession();
-    // Eliminar historial de canjes
+
+    // 1. Eliminar notificaciones in-app
+    await db.delete(appNotifications).where(eq(appNotifications.clientId, id));
+
+    // 2. Eliminar historial de cambios de nombre
+    await db.delete(nameChangesHistory).where(eq(nameChangesHistory.clientId, id));
+
+    // 3. Eliminar historial de canjes
     await db.delete(redemptions).where(eq(redemptions.clientId, id));
-    // Desvincular codigos escaneados (dejarlos huerfanos para no afectar estadisticas, o volverlos null)
+
+    // 4. Desvincular codigos escaneados (dejarlos huerfanos para no afectar estadisticas)
     await db.update(codes).set({ usedByClientId: null }).where(eq(codes.usedByClientId, id));
-    // Finalmente, eliminar el cliente
+
+    // 5. Finalmente, eliminar el cliente
     await db.delete(clients).where(eq(clients.id, id));
 
     await db.insert(adminNotifications).values({
@@ -391,6 +400,38 @@ export async function deleteClient(id: number) {
 
     revalidatePath("/admin/clients");
     revalidatePath("/admin");
+}
+
+export async function blockClient(id: number, reason: string) {
+    await requireAdminSession();
+    await db.update(clients).set({
+        isBlocked: true,
+        blockReason: reason
+    }).where(eq(clients.id, id));
+
+    await db.insert(adminNotifications).values({
+        type: "admin_blocked_client",
+        message: `Admin bloqueó al cliente #${id}. Motivo: ${reason}`,
+        isRead: false
+    });
+
+    revalidatePath("/admin/clients");
+}
+
+export async function unblockClient(id: number) {
+    await requireAdminSession();
+    await db.update(clients).set({
+        isBlocked: false,
+        blockReason: null
+    }).where(eq(clients.id, id));
+
+    await db.insert(adminNotifications).values({
+        type: "admin_unblocked_client",
+        message: `Admin desbloqueó al cliente #${id}`,
+        isRead: false
+    });
+
+    revalidatePath("/admin/clients");
 }
 
 export async function searchRedemptionTicket(query: string) {

@@ -11,7 +11,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { requestOtp, verifyOtp, getPublicSettings } from "@/actions/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import Link from "next/link";
@@ -28,9 +28,16 @@ export default function ClientLoginPage() {
     const [resendCount, setResendCount] = useState(0);
     const MAX_RESENDS = 3;
 
+    const searchParams = useSearchParams();
+
     useEffect(() => {
         getPublicSettings().then(s => setNotice(s.notice_guest || ""));
-    }, []);
+
+        const blockedMsg = searchParams?.get("blocked");
+        if (blockedMsg) {
+            setError(blockedMsg === "1" ? "Tu cuenta ha sido bloqueada por un administrador." : blockedMsg);
+        }
+    }, [searchParams]);
 
     // Countdown timer
     useEffect(() => {

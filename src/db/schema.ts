@@ -51,6 +51,8 @@ export const clients = mysqlTable("clients", {
     deletedAt: timestamp(),
     lastLoginAt: timestamp(),
     loginCount: int().notNull().default(0),
+    isBlocked: boolean("is_blocked").notNull().default(false),
+    blockReason: text("block_reason"),
     createdAt: timestamp().defaultNow().notNull(),
 });
 

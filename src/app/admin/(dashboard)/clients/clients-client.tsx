@@ -10,10 +10,10 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { deleteClient, searchRedemptionTicket, getClientMovements, approveRedemption, rejectRedemption } from "@/actions/admin";
+import { deleteClient, searchRedemptionTicket, getClientMovements, approveRedemption, rejectRedemption, blockClient, unblockClient } from "@/actions/admin";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useModalStore } from "@/lib/modal-store";
-import { Users, Trash2, MessageCircle, Search, ShieldCheck, Check, X, Gift, Download } from "lucide-react";
+import { Users, Trash2, MessageCircle, Search, ShieldCheck, Check, X, Gift, Download, Ban, Unlock } from "lucide-react";
 import { toast } from "@/lib/toast";
 import type { Client, Redemption } from "@/types";
 
@@ -64,6 +64,10 @@ export function ClientsClient({ initialClients, initialPendingRedemptions }: Cli
 
     // Delete Confirmation
     const [deleteId, setDeleteId] = useState<number | null>(null);
+
+    // Block Confirmation
+    const [blockId, setBlockId] = useState<number | null>(null);
+    const [blockReason, setBlockReason] = useState("");
 
     // Client Search/Filter
     const [clientFilter, setClientFilter] = useState("");
@@ -212,6 +216,27 @@ export function ClientsClient({ initialClients, initialPendingRedemptions }: Cli
         setDeleteId(null);
         setShowDetailModal(false);
         toast.success("Cliente eliminado");
+        router.refresh();
+    };
+
+    const handleBlock = async () => {
+        if (!blockId) return;
+        if (!blockReason.trim()) {
+            toast.error("Debes ingresar un motivo para bloquear la cuenta.");
+            return;
+        }
+        await blockClient(blockId, blockReason.trim());
+        setBlockId(null);
+        setBlockReason("");
+        setShowDetailModal(false);
+        toast.success("Cuenta bloqueada exitosamente");
+        router.refresh();
+    };
+
+    const handleUnblock = async (id: number) => {
+        await unblockClient(id);
+        setShowDetailModal(false);
+        toast.success("Cuenta desbloqueada exitosamente");
         router.refresh();
     };
 
@@ -543,26 +568,56 @@ export function ClientsClient({ initialClients, initialPendingRedemptions }: Cli
                             </div>
 
                             {/* Quick Actions */}
-                            <div className="flex gap-2">
-                                <Button variant="outline" size="sm" className="flex-1" asChild>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                <Button variant="outline" size="sm" asChild>
                                     <a
                                         href={`https://wa.me/593${selectedClient.phone.slice(1)}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                     >
-                                        <MessageCircle className="w-4 h-4 mr-1.5" />
+                                        <MessageCircle className="w-4 h-4 mr-1.5 hidden sm:inline-block" />
                                         WhatsApp
                                     </a>
                                 </Button>
+
+                                {selectedClient.isBlocked ? (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="border-warning text-warning hover:bg-warning hover:text-warning-foreground"
+                                        onClick={() => handleUnblock(selectedClient.id)}
+                                    >
+                                        <Unlock className="w-4 h-4 mr-1.5 hidden sm:inline-block" />
+                                        Desbloquear
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                                        onClick={() => setBlockId(selectedClient.id)}
+                                    >
+                                        <Ban className="w-4 h-4 mr-1.5 hidden sm:inline-block" />
+                                        Bloquear
+                                    </Button>
+                                )}
+
                                 <Button
                                     variant="destructive"
                                     size="sm"
                                     onClick={() => setDeleteId(selectedClient.id)}
                                 >
-                                    <Trash2 className="w-4 h-4 mr-1.5" />
+                                    <Trash2 className="w-4 h-4 mr-1.5 hidden sm:inline-block" />
                                     Eliminar
                                 </Button>
                             </div>
+
+                            {selectedClient.isBlocked && (
+                                <div className="bg-destructive/10 text-destructive border border-destructive/20 rounded-lg p-3 text-sm">
+                                    <p className="font-bold flex items-center gap-2 mb-1"><Ban size={16} /> Cuenta bloqueada</p>
+                                    <p>{selectedClient.blockReason}</p>
+                                </div>
+                            )}
 
                             {/* New Stats Grid */}
                             <div className="grid grid-cols-3 gap-3">
@@ -680,6 +735,36 @@ export function ClientsClient({ initialClients, initialPendingRedemptions }: Cli
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setDeleteId(null)}>Cancelar</Button>
                         <Button variant="destructive" onClick={handleDelete}>Eliminar</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Block Confirmation */}
+            <Dialog open={blockId !== null} onOpenChange={(open) => {
+                if (!open) {
+                    setBlockId(null);
+                    setBlockReason("");
+                }
+            }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Bloquear Cliente</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-2">
+                        <p className="text-sm text-muted-foreground mb-4">
+                            El cliente no podrá iniciar sesión y será desconectado inmediatamente si tiene una sesión activa abierta. ¿Por qué motivo lo estás bloqueando?
+                        </p>
+                        <Textarea
+                            placeholder="Motivo del bloqueo (ej. Actividad sospechosa, Solicitud del usuario, Fraude...)"
+                            value={blockReason}
+                            onChange={(e) => setBlockReason(e.target.value)}
+                            rows={3}
+                            className="resize-none"
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => { setBlockId(null); setBlockReason(""); }}>Cancelar</Button>
+                        <Button variant="destructive" onClick={handleBlock}>Bloquear Cuenta</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

@@ -60,10 +60,21 @@ export async function requestOtp(phone: string) {
     const now = Date.now();
     const rateLimit = rateLimitStore.get(phone) || { requests: 0, verifyAttempts: 0, lockedUntil: 0 };
 
-    // Verificar si está bloqueado
+    // Verificar si está en rate limit local
     if (now < rateLimit.lockedUntil) {
         const remaining = Math.ceil((rateLimit.lockedUntil - now) / 60000);
         return { success: false, error: `Demasiados intentos. Intenta en ${remaining} minutos.`, isLocked: true };
+    }
+
+    // Verificar si está bloqueado por un administrador en la BBDD
+    const [existingClient] = await db.select().from(clients).where(eq(clients.phone, phone)).limit(1);
+
+    if (existingClient?.isBlocked) {
+        return {
+            success: false,
+            error: existingClient.blockReason || "Tu cuenta ha sido bloqueada por un administrador.",
+            isBlocked: true
+        };
     }
 
     const existingOtp = otpStore.get(phone);
@@ -83,9 +94,6 @@ export async function requestOtp(phone: string) {
         rateLimit.requests = 0; // reset para después del bloqueo
         rateLimit.verifyAttempts = 0;
         rateLimitStore.set(phone, rateLimit);
-
-        // Buscar cliente para ver si quiere transaccionales
-        const [existingClient] = await db.select().from(clients).where(eq(clients.phone, phone)).limit(1);
 
         if (existingClient) {
             await db.insert(appNotifications).values({
@@ -201,6 +209,15 @@ export async function verifyOtp(phone: string, otp: string) {
         .limit(1);
 
     if (existingClient) {
+        // Bloqueo manual por Admin
+        if (existingClient.isBlocked) {
+            return {
+                success: false,
+                error: existingClient.blockReason || "Tu cuenta ha sido bloqueada por un administrador.",
+                isBlocked: true
+            };
+        }
+
         // Cuenta soft-deleted: reactivar con datos limpios
         if (existingClient.deletedAt) {
             // Liberar el username anterior para que otros lo usen

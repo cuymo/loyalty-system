@@ -7,11 +7,14 @@
  * Descripcion de la modificacion: ThemeProvider independiente con storageKey="theme-client"
  */
 
-import { getClientSession } from "@/lib/auth/client-jwt";
+import { getClientSession, destroyClientSession } from "@/lib/auth/client-jwt";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ClientBottomNav } from "@/components/shared/client-nav";
 import { getPublicSettings } from "@/actions/client";
+import { db } from "@/db";
+import { clients } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { ClientTypebotBubble } from "@/components/shared/client-typebot";
 import { ModeToggle } from "@/components/shared/mode-toggle";
 import { ClientNotificationBell } from "@/components/shared/client-notification-bell";
@@ -24,6 +27,18 @@ export default async function ClientLayout({
 }) {
     const session = await getClientSession();
     if (!session) redirect("/login");
+
+    const [client] = await db.select().from(clients).where(eq(clients.id, session.clientId)).limit(1);
+
+    if (!client) {
+        await destroyClientSession();
+        redirect("/login");
+    }
+
+    if (client.isBlocked) {
+        await destroyClientSession();
+        redirect("/login?blocked=" + encodeURIComponent(client.blockReason || ""));
+    }
 
     const settings = await getPublicSettings();
 
