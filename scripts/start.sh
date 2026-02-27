@@ -5,7 +5,7 @@
 set -e
 
 echo "==> [1/3] Preparando infraestructura de datos..."
-npx drizzle-kit push --force || echo "  Nota: Esquema ya sincronizado o pendiente de migración manual."
+npx drizzle-kit push --config drizzle.config.ts || echo "  Nota: Esquema ya sincronizado o pendiente de migración manual."
 
 echo "==> [2/3] Verificando configuración del sistema..."
 npx tsx src/db/seed.ts
