@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { processCrmCampaign } from "@/actions/admin/crm";
+import { processCrmCampaign, createClientGroup, deleteClientGroup, assignClientsToGroup, removeClientsFromGroup } from "@/actions/admin/crm";
 import { getClientMovements } from "@/actions/admin";
-import { Users, Search, Target, Gift, Send, Filter, ShieldAlert, BadgeInfo, Plus, MessageCircle } from "lucide-react";
+import { Users, Search, Target, Gift, Send, Filter, ShieldAlert, BadgeInfo, Plus, MessageCircle, MoreVertical, Trash, Tag } from "lucide-react";
 import { toast } from "@/lib/toast";
 
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,12 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useModalStore } from "@/lib/modal-store";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -33,6 +39,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogFooter,
 } from "@/components/ui/dialog";
 import {
     Drawer,
@@ -40,6 +47,7 @@ import {
     DrawerHeader,
     DrawerTitle,
 } from "@/components/ui/drawer";
+import { useRouter } from "next/navigation";
 
 export type CrmClient = {
     id: number;
@@ -58,11 +66,14 @@ export type CrmClient = {
 
 interface CampaignsClientProps {
     initialClients: any[];
+    initialGroups: any[];
+    initialMemberships: any[];
 }
 
-type FilterType = 'all' | 'vips' | 'absent' | 'hoarders';
+type FilterType = 'all' | 'vips' | 'absent' | 'hoarders' | string;
 
-export function CampaignsClient({ initialClients }: CampaignsClientProps) {
+export function CampaignsClient({ initialClients, initialGroups, initialMemberships }: CampaignsClientProps) {
+    const router = useRouter();
     const [searchQuery, setSearchQuery] = useState("");
     const [activeFilter, setActiveFilter] = useState<FilterType>('all');
 
@@ -74,6 +85,16 @@ export function CampaignsClient({ initialClients }: CampaignsClientProps) {
     const [clientMovements, setClientMovements] = useState<any[]>([]);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
     const [showDetailModal, setShowDetailModal] = useState(false);
+
+    // Grupos State
+    const [showGroupsModal, setShowGroupsModal] = useState(false);
+    const [newGroupName, setNewGroupName] = useState("");
+    const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+
+    // Asignar al grupo Modal
+    const [showAssignModal, setShowAssignModal] = useState(false);
+    const [isAssigning, setIsAssigning] = useState(false);
+    const [assignTargetGroup, setAssignTargetGroup] = useState<string>("");
 
     // Modal Global Store
     const { openModal } = useModalStore();
@@ -98,6 +119,11 @@ export function CampaignsClient({ initialClients }: CampaignsClientProps) {
                 result = result.filter(c => c.points >= 30 && c.totalRedemptions === 0);
                 break;
             default:
+                if (activeFilter.startsWith('group_')) {
+                    const groupId = Number(activeFilter.replace('group_', ''));
+                    const memberIds = new Set(initialMemberships.filter((m: any) => m.groupId === groupId).map((m: any) => m.clientId));
+                    result = result.filter(c => memberIds.has(c.id));
+                }
                 break;
         }
 
@@ -110,7 +136,7 @@ export function CampaignsClient({ initialClients }: CampaignsClientProps) {
         }
 
         return result;
-    }, [initialClients, activeFilter, searchQuery]);
+    }, [initialClients, activeFilter, searchQuery, initialMemberships]);
 
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
@@ -133,12 +159,57 @@ export function CampaignsClient({ initialClients }: CampaignsClientProps) {
         return new Date(dateString).toLocaleDateString();
     };
 
-    // Open Campaign Modal via Zustand
     const handleLaunchClick = () => {
+        // Al enviar campaña filtramos los que no quieren marketing de forma silenciosa para WA
+        // Esto está gestionado en el CRM pero le informamos al usuario:
         openModal("campaign_creator", { selectedIds });
     };
 
-    // Resets selection after successful campaign
+    const handleCreateGroup = async () => {
+        if (!newGroupName.trim()) return;
+        setIsCreatingGroup(true);
+        try {
+            await createClientGroup(newGroupName);
+            setNewGroupName("");
+            toast.success("Grupo creado exitosamente");
+            router.refresh();
+        } catch {
+            toast.error("Error al crear grupo");
+        } finally {
+            setIsCreatingGroup(false);
+        }
+    };
+
+    const handleDeleteGroup = async (id: number) => {
+        try {
+            await deleteClientGroup(id);
+            if (activeFilter === `group_${id}`) {
+                setActiveFilter('all');
+            }
+            toast.success("Grupo eliminado");
+            router.refresh();
+        } catch {
+            toast.error("Error al eliminar grupo");
+        }
+    };
+
+    const handleAssignToGroup = async () => {
+        if (!assignTargetGroup) return;
+        setIsAssigning(true);
+        try {
+            await assignClientsToGroup(Number(assignTargetGroup), selectedIds);
+            toast.success("Clientes asignados al grupo");
+            setSelectedIds([]);
+            setShowAssignModal(false);
+            setAssignTargetGroup("");
+            router.refresh();
+        } catch {
+            toast.error("Error al asignar clientes");
+        } finally {
+            setIsAssigning(false);
+        }
+    };
+
     useEffect(() => {
         const handleCampaignDone = () => {
             setSelectedIds([]);
@@ -155,7 +226,7 @@ export function CampaignsClient({ initialClients }: CampaignsClientProps) {
             const movements = await getClientMovements(client.id);
             setClientMovements(movements);
         } catch {
-            toast.error("Error al cargar historial del cliente");
+            toast.error("Error al cargar historial");
         } finally {
             setIsLoadingHistory(false);
         }
@@ -165,38 +236,55 @@ export function CampaignsClient({ initialClients }: CampaignsClientProps) {
         <div className="p-4 md:p-8 space-y-6 flex flex-col h-[calc(100vh-4rem)] md:h-screen">
             <div>
                 <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-                    Campañas CRM
+                    Campañas y Grupos
                 </h1>
                 <p className="text-muted-foreground mt-1 text-sm md:text-base">
-                    Gestión de puntos de regalo y notificaciones.
+                    Gestión de envíos y segmentación de clientes.
                 </p>
             </div>
 
-            {/* Top Action Bar exactly like Codes/Rewards */}
-            <div className="flex flex-col sm:flex-row justify-start gap-4 items-start sm:items-center shrink-0">
-                <Button
-                    onClick={handleLaunchClick}
-                    disabled={selectedIds.length === 0}
-                    className="w-full sm:w-auto shrink-0"
-                >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Crear Campaña ({selectedIds.length})
-                </Button>
+            <div className="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center shrink-0">
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                    <Button
+                        onClick={handleLaunchClick}
+                        disabled={selectedIds.length === 0}
+                        className="shrink-0 font-bold"
+                    >
+                        <Send className="mr-2 h-4 w-4" />
+                        Crear Campaña ({selectedIds.length})
+                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" disabled={selectedIds.length === 0} className="shrink-0 gap-2">
+                                <Users size={16} />
+                                Mover a Grupo
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                            <DropdownMenuItem onClick={() => setShowAssignModal(true)}>
+                                Asignar a un Grupo Existente
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button variant="secondary" onClick={() => setShowGroupsModal(true)} className="gap-2 shrink-0">
+                        <Tag size={16} />
+                        Gestionar Grupos
+                    </Button>
+                </div>
 
                 {initialClients.length > 0 && (
                     <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-center">
-                        <div className="hidden sm:block w-px h-8 bg-border mx-1"></div>
-                        <div className="relative w-full sm:w-64 -ml-2 sm:ml-0">
+                        <div className="relative w-full sm:w-64">
                             <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
-                                placeholder="Buscar cliente por nombre..."
+                                placeholder="Buscar por nombre..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="pl-8"
                             />
                         </div>
                         <Select value={activeFilter} onValueChange={(v) => setActiveFilter(v as FilterType)}>
-                            <SelectTrigger className="w-full sm:w-[150px]">
+                            <SelectTrigger className="w-full sm:w-[170px]">
                                 <SelectValue placeholder="Audiencia" />
                             </SelectTrigger>
                             <SelectContent>
@@ -212,6 +300,19 @@ export function CampaignsClient({ initialClients }: CampaignsClientProps) {
                                 <SelectItem value="hoarders">
                                     <div className="flex items-center gap-2"><Gift size={14} />Acumuladores</div>
                                 </SelectItem>
+                                {initialGroups.length > 0 && (
+                                    <>
+                                        <div className="h-px bg-border my-2" />
+                                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase">Grupos Creados</div>
+                                        {initialGroups.map((g: any) => (
+                                            <SelectItem key={`group_${g.id}`} value={`group_${g.id}`}>
+                                                <div className="flex items-center gap-2">
+                                                    <BadgeInfo size={14} className="text-primary" />{g.name}
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </>
+                                )}
                             </SelectContent>
                         </Select>
                     </div>
@@ -262,7 +363,7 @@ export function CampaignsClient({ initialClients }: CampaignsClientProps) {
                                                 <div className="font-semibold text-foreground flex items-center gap-2">
                                                     {client.username}
                                                     {!client.wantsMarketing && (
-                                                        <span title="Bloqueó Mensajes de WhatsApp" className="flex items-center">
+                                                        <span title="Bloqueó Mensajes de Marketing" className="flex items-center">
                                                             <ShieldAlert size={14} className="text-muted-foreground" />
                                                         </span>
                                                     )}
@@ -301,6 +402,74 @@ export function CampaignsClient({ initialClients }: CampaignsClientProps) {
                 </Table>
             </div>
 
+            {/* Modals Extras */}
+            <Dialog open={showGroupsModal} onOpenChange={setShowGroupsModal}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Gestionar Grupos de Clientes</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                        <div className="flex gap-2">
+                            <Input
+                                placeholder="Nombre del nuevo grupo..."
+                                value={newGroupName}
+                                onChange={e => setNewGroupName(e.target.value)}
+                            />
+                            <Button onClick={handleCreateGroup} disabled={isCreatingGroup}>
+                                <Plus size={16} className="mr-2" />
+                                Añadir
+                            </Button>
+                        </div>
+                        <div className="space-y-2 mt-4 max-h-[40vh] overflow-y-auto">
+                            {initialGroups.length === 0 ? (
+                                <p className="text-center text-sm text-muted-foreground py-4">No has creado ningún grupo todavía.</p>
+                            ) : (
+                                initialGroups.map(group => (
+                                    <div key={group.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50">
+                                        <div>
+                                            <h4 className="font-medium">{group.name}</h4>
+                                            <p className="text-xs text-muted-foreground">Id: {group.id}</p>
+                                        </div>
+                                        <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDeleteGroup(group.id)}>
+                                            <Trash size={16} />
+                                        </Button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={showAssignModal} onOpenChange={setShowAssignModal}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Asignar a Grupo</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                        <p className="text-sm text-muted-foreground">
+                            Asignarás {selectedIds.length} clientes a este grupo.
+                        </p>
+                        <Select value={assignTargetGroup} onValueChange={setAssignTargetGroup}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Selecciona un grupo destino" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {initialGroups.map(g => (
+                                    <SelectItem key={g.id.toString()} value={g.id.toString()}>{g.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setShowAssignModal(false)} disabled={isAssigning}>Cancelar</Button>
+                            <Button onClick={handleAssignToGroup} disabled={!assignTargetGroup || isAssigning}>
+                                Confirmar Asignación
+                            </Button>
+                        </DialogFooter>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
             <CampaignsModalController />
 
             {/* Client Detail Modal */}
@@ -312,7 +481,6 @@ export function CampaignsClient({ initialClients }: CampaignsClientProps) {
 
                     {selectedDetailClient && (
                         <div className="space-y-6">
-                            {/* Client Info Header */}
                             <div className="flex items-center gap-4 bg-muted/30 p-4 rounded-xl border border-border">
                                 <img
                                     src={`/avatars/${selectedDetailClient.avatarSvg}`}
@@ -341,8 +509,6 @@ export function CampaignsClient({ initialClients }: CampaignsClientProps) {
                                     </Badge>
                                 </div>
                             </div>
-
-                            {/* Quick Actions */}
                             <div className="flex gap-2">
                                 <Button className="flex-1 bg-[#25D366] hover:bg-[#128C7E] text-white" asChild>
                                     <a
@@ -354,86 +520,36 @@ export function CampaignsClient({ initialClients }: CampaignsClientProps) {
                                         Contactar por WhatsApp
                                     </a>
                                 </Button>
+                                {/* Quitar del grupo si está filtrado por grupo */}
+                                {activeFilter.startsWith('group_') && (
+                                    <Button variant="destructive" onClick={async () => {
+                                        const gid = Number(activeFilter.replace('group_', ''));
+                                        await removeClientsFromGroup(gid, [selectedDetailClient.id]);
+                                        toast.success("Removido del grupo");
+                                        setShowDetailModal(false);
+                                    }}>
+                                        Remover de Grupo
+                                    </Button>
+                                )}
                             </div>
-
-                            {/* Stats Grid */}
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                 <div className="bg-background border rounded-lg p-3 justify-center flex flex-col items-center shadow-sm">
                                     <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 text-center">Registro</span>
-                                    <span className="text-sm font-medium">{selectedDetailClient.createdAt ? new Date(selectedDetailClient.createdAt).toLocaleDateString("es-ES", { month: 'short', year: 'numeric' }) : "N/A"}</span>
-                                </div>
-                                <div className="bg-background border rounded-lg p-3 justify-center flex flex-col items-center shadow-sm">
-                                    <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 text-center">Cumpleaños</span>
-                                    <span className="text-sm font-medium">{selectedDetailClient.birthDate || "N/A"}</span>
-                                </div>
-                                <div className="bg-background border rounded-lg p-3 justify-center flex flex-col items-center shadow-sm">
-                                    <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 text-center">Visitas</span>
-                                    <span className="text-sm font-medium text-foreground">{selectedDetailClient.totalVisits || 0}</span>
-                                </div>
-                                <div className="bg-background border rounded-lg p-3 justify-center flex flex-col items-center shadow-sm">
-                                    <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 text-center">Canjes</span>
-                                    <span className="text-sm font-medium text-foreground">{selectedDetailClient.totalRedemptions || 0}</span>
+                                    <span className="text-sm font-medium">{selectedDetailClient.createdAt ? new Date(selectedDetailClient.createdAt).toLocaleDateString() : "N/A"}</span>
                                 </div>
                             </div>
-
-                            {/* Movements History */}
                             <div className="space-y-3">
-                                <h4 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-                                    <Search size={14} className="text-muted-foreground" />
-                                    Historial Reciente
-                                </h4>
-                                <div className="max-h-[35vh] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                                <h4 className="text-sm font-bold text-foreground flex items-center gap-2">Historial Reciente</h4>
+                                <div className="max-h-[35vh] overflow-y-auto space-y-2 pr-2">
                                     {isLoadingHistory ? (
-                                        <div className="space-y-2">
-                                            {[1, 2, 3].map(i => (
-                                                <div key={i} className="h-16 bg-muted/50 rounded-lg animate-pulse" />
-                                            ))}
-                                        </div>
+                                        <p>Cargando...</p>
                                     ) : clientMovements.length === 0 ? (
-                                        <div className="text-center py-8 border-2 border-dashed rounded-lg bg-muted/10">
-                                            <p className="text-sm text-muted-foreground">Sin movimientos registrados.</p>
-                                        </div>
+                                        <p className="text-sm text-muted-foreground">Sin movimientos.</p>
                                     ) : (
                                         clientMovements.map((mov) => (
-                                            <div
-                                                key={mov.id}
-                                                className="flex items-start justify-between gap-3 p-3 bg-background hover:bg-muted/30 border rounded-lg transition-colors"
-                                            >
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="text-sm font-medium text-foreground break-words leading-tight mb-1">
-                                                        {mov.details}
-                                                    </p>
-                                                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground font-medium">
-                                                        <span>{new Date(mov.date).toLocaleString("es-EC", { dateStyle: 'medium', timeStyle: 'short' })}</span>
-                                                        {mov.type === "redemption" && mov.status && (
-                                                            <Badge
-                                                                variant={
-                                                                    mov.status === "approved"
-                                                                        ? "default"
-                                                                        : mov.status === "rejected"
-                                                                            ? "destructive"
-                                                                            : "outline"
-                                                                }
-                                                                className="text-[9px] px-1.5 py-0 uppercase h-4"
-                                                            >
-                                                                {mov.status === "approved"
-                                                                    ? "Aprobado"
-                                                                    : mov.status === "rejected"
-                                                                        ? "Rechazado"
-                                                                        : "Pendiente"}
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                {mov.type !== "name_change" && (
-                                                    <Badge
-                                                        variant="outline"
-                                                        className={`text-sm shrink-0 font-bold border-transparent ${mov.points > 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}
-                                                    >
-                                                        {mov.points > 0 ? "+" : ""}
-                                                        {mov.points} pts
-                                                    </Badge>
-                                                )}
+                                            <div key={mov.id} className="flex justify-between p-3 border rounded-lg">
+                                                <div className="text-sm">{mov.details}</div>
+                                                <Badge variant="outline">{mov.points} pts</Badge>
                                             </div>
                                         ))
                                     )}
@@ -447,13 +563,10 @@ export function CampaignsClient({ initialClients }: CampaignsClientProps) {
     );
 }
 
-// Global Controller for Responsive Modal
 function CampaignsModalController() {
     const { activeModal, data, closeModal } = useModalStore();
     const isMobile = useIsMobile();
-
     if (activeModal !== "campaign_creator") return null;
-
     const selectedIds = data.selectedIds as number[];
 
     if (isMobile) {
@@ -475,13 +588,14 @@ function CampaignsModalController() {
                 <DialogHeader>
                     <DialogTitle>Asistente de Campaña (A {selectedIds.length} clientes)</DialogTitle>
                 </DialogHeader>
-                <CampaignFormContent selectedIds={selectedIds} onClose={closeModal} />
+                <div className="p-4 pt-0">
+                    <CampaignFormContent selectedIds={selectedIds} onClose={closeModal} />
+                </div>
             </DialogContent>
         </Dialog>
     );
 }
 
-// Inner Content logic to avoid duplication between Dialog and Drawer
 function CampaignFormContent({ selectedIds, onClose }: { selectedIds: number[], onClose: () => void }) {
     const [isProcessing, setIsProcessing] = useState(false);
     const [enablePoints, setEnablePoints] = useState(false);
@@ -492,21 +606,6 @@ function CampaignFormContent({ selectedIds, onClose }: { selectedIds: number[], 
     const [msgImageUrl, setMsgImageUrl] = useState("");
 
     const handleLaunchCampaign = async () => {
-        if (!enablePoints && !enableMessage) {
-            toast.error("Debes elegir al menos una acción (Regalar Puntos o Enviar Mensaje)");
-            return;
-        }
-
-        if (enablePoints && giftPoints <= 0) {
-            toast.error("La cantidad de puntos a regalar debe ser mayor a 0");
-            return;
-        }
-
-        if (enableMessage && (!msgTitle.trim() || !msgBody.trim())) {
-            toast.error("El titulo y cuerpo del mensaje son obligatorios si activas la casilla");
-            return;
-        }
-
         setIsProcessing(true);
         try {
             const res = await processCrmCampaign(selectedIds, {
@@ -522,80 +621,42 @@ function CampaignFormContent({ selectedIds, onClose }: { selectedIds: number[], 
                 window.dispatchEvent(new Event("campaign_done"));
                 onClose();
             } else {
-                toast.error(res.error || "Ocurrio un error critico en la transaccon");
+                toast.error(res.error || "Error crítico");
             }
-        } catch (error) {
-            toast.error("Fallo la comunicacion con el servidor");
+        } catch {
+            toast.error("Fallo comunicación");
         } finally {
             setIsProcessing(false);
         }
     };
 
     return (
-        <div className="space-y-4 py-4">
+        <div className="space-y-4">
             <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Título</label>
-                <Input
-                    placeholder="Ej: ¡Nuevo descuento especial!"
-                    value={msgTitle}
-                    onChange={e => setMsgTitle(e.target.value)}
-                />
+                <label className="text-sm font-medium">Título</label>
+                <Input value={msgTitle} onChange={e => setMsgTitle(e.target.value)} />
             </div>
             <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Mensaje</label>
-                <Textarea
-                    className="min-h-[100px]"
-                    placeholder="Escribe el cuerpo del mensaje..."
-                    value={msgBody}
-                    onChange={e => setMsgBody(e.target.value)}
-                />
+                <label className="text-sm font-medium">Mensaje</label>
+                <Textarea value={msgBody} onChange={e => setMsgBody(e.target.value)} />
             </div>
             <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">URL de Imagen (Opcional, para WhatsApp)</label>
-                <Input
-                    placeholder="https://ejemplo.com/imagen.jpg"
-                    value={msgImageUrl}
-                    onChange={e => setMsgImageUrl(e.target.value)}
-                />
+                <label className="text-sm font-medium">URL de Imagen (Opcional)</label>
+                <Input value={msgImageUrl} onChange={e => setMsgImageUrl(e.target.value)} />
             </div>
             <div className="space-y-3 pt-2">
-                <label className="text-sm font-medium text-foreground">Acciones de Campaña</label>
                 <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
-                    <div className="flex items-center gap-2">
-                        <Send size={16} className="text-foreground" />
-                        <span className="text-sm">Push de Mensaje (In-App y WhatsApp)</span>
-                    </div>
-                    <Checkbox
-                        checked={enableMessage}
-                        onCheckedChange={(checked) => setEnableMessage(checked === true)}
-                    />
+                    <span className="text-sm flex gap-2"><Send size={16} />Push de Mensaje</span>
+                    <Checkbox checked={enableMessage} onCheckedChange={(checked) => setEnableMessage(checked === true)} />
                 </div>
                 <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
-                    <div className="flex items-center gap-2">
-                        <Gift size={16} className="text-foreground" />
-                        <span className="text-sm flex items-center gap-2">
-                            Acreditar Puntos:
-                            <Input
-                                type="number"
-                                className="w-20 h-8 ml-2 bg-background"
-                                value={giftPoints || ''}
-                                onChange={(e) => setGiftPoints(Number(e.target.value))}
-                                disabled={!enablePoints}
-                                placeholder="Cant."
-                            />
-                        </span>
-                    </div>
-                    <Checkbox
-                        checked={enablePoints}
-                        onCheckedChange={(checked) => setEnablePoints(checked === true)}
-                    />
+                    <span className="text-sm flex items-center gap-2"><Gift size={16} />Acreditar Puntos: <Input type="number" className="w-20 h-8 ml-2" value={giftPoints || ''} onChange={(e) => setGiftPoints(Number(e.target.value))} disabled={!enablePoints} /></span>
+                    <Checkbox checked={enablePoints} onCheckedChange={(checked) => setEnablePoints(checked === true)} />
                 </div>
             </div>
             <div className="flex justify-end gap-2 pt-4">
                 <Button variant="outline" onClick={onClose} disabled={isProcessing}>Cancelar</Button>
-                <Button onClick={handleLaunchCampaign} disabled={isProcessing || (!enablePoints && !enableMessage)}>
-                    {isProcessing ? "Enviando..." : "Enviar Ahora"}
-                </Button>
+                <Button onClick={handleLaunchCampaign} disabled={isProcessing}>Enviar Ahora</Button>
             </div>
         </div>
     );

@@ -6,6 +6,7 @@
  */
 
 import { getClientProfile, getAvailableAvatars } from "@/actions/client";
+import { getReferralProgress } from "@/actions/client/referrals";
 import { redirect } from "next/navigation";
 import { ProfileClient } from "./profile-client";
 
@@ -14,10 +15,11 @@ export default async function ProfilePage() {
     if (!client) redirect("/login");
 
     const avatars = await getAvailableAvatars();
+    const referralProgress = await getReferralProgress(client.id);
 
     return (
         <div className="max-w-md mx-auto px-4 pt-8">
-            <ProfileClient client={client} avatars={avatars} />
+            <ProfileClient client={client} avatars={avatars} referralProgress={referralProgress} />
         </div>
     );
 }

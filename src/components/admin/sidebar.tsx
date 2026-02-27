@@ -27,6 +27,7 @@ import {
     UserCircle,
     ExternalLink,
     Crown,
+    Share2,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
@@ -64,6 +65,7 @@ const navGroups: NavGroup[] = [
         items: [
             { label: "Clientes", href: "/admin/clients", icon: Users },
             { label: "Campañas", href: "/admin/campaigns", icon: Megaphone },
+            { label: "Referidos", href: "/admin/referrals", icon: Share2 },
             { label: "Premios", href: "/admin/rewards", icon: Gift },
             { label: "Códigos", href: "/admin/codes", icon: QrCode },
             { label: "Reportes", href: "/admin/reports", icon: BarChart3 },

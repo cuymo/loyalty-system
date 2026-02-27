@@ -26,10 +26,11 @@ export function RegisterForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const phone = searchParams.get("phone") || "";
+    const refParam = searchParams.get("ref");
 
     const [username, setUsername] = useState("");
     const [birthDate, setBirthDate] = useState("");
-    const [referredByCode, setReferredByCode] = useState("");
+    const [referredByCode, setReferredByCode] = useState(refParam ? refParam.replace(/\D/g, "") : "");
     const [avatarSvg, setAvatarSvg] = useState("default.svg");
     const [avatars, setAvatars] = useState<string[]>([]);
     const [acceptedTerms, setAcceptedTerms] = useState(false);

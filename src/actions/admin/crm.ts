@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { clients, codes, redemptions, adminNotifications, appNotifications } from "@/db/schema";
+import { clients, codes, redemptions, adminNotifications, appNotifications, clientGroups, clientGroupMembers } from "@/db/schema";
 import { eq, sql, inArray, isNull, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { triggerWebhook } from "@/lib/webhook";
@@ -142,4 +142,87 @@ export async function processCrmCampaign(
 
         return { success: true };
     });
+}
+
+/**
+ * Obtiene todos los grupos de clientes.
+ */
+export async function getClientGroups() {
+    return await db.select().from(clientGroups).orderBy(clientGroups.name);
+}
+
+/**
+ * Obtiene las membresías (relaciones) entre clientes y grupos.
+ */
+export async function getClientGroupMembers() {
+    return await db.select().from(clientGroupMembers);
+}
+
+/**
+ * Crea un nuevo grupo de clientes.
+ */
+export async function createClientGroup(name: string, description?: string) {
+    if (!name.trim()) return { success: false, error: "El nombre es obligatorio" };
+
+    await db.insert(clientGroups).values({
+        name: name.trim(),
+        description: description?.trim() || null,
+    });
+
+    revalidatePath("/admin/campaigns");
+    return { success: true };
+}
+
+/**
+ * Elimina un grupo de clientes (las relaciones se borran en cascada por el esquema).
+ */
+export async function deleteClientGroup(groupId: number) {
+    await db.delete(clientGroups).where(eq(clientGroups.id, groupId));
+    revalidatePath("/admin/campaigns");
+    return { success: true };
+}
+
+/**
+ * Asigna múltiples clientes a un grupo existente (ignorando si ya están asignados).
+ */
+export async function assignClientsToGroup(groupId: number, clientIds: number[]) {
+    if (clientIds.length === 0) return { success: true };
+
+    const existingMemberships = await db
+        .select({ clientId: clientGroupMembers.clientId })
+        .from(clientGroupMembers)
+        .where(eq(clientGroupMembers.groupId, groupId));
+
+    const existingIds = new Set(existingMemberships.map(m => m.clientId));
+    const newAssignments = clientIds
+        .filter(id => !existingIds.has(id))
+        .map(id => ({
+            groupId,
+            clientId: id
+        }));
+
+    if (newAssignments.length > 0) {
+        await db.insert(clientGroupMembers).values(newAssignments);
+    }
+
+    revalidatePath("/admin/campaigns");
+    return { success: true };
+}
+
+/**
+ * Elimina múltiples clientes de un grupo.
+ */
+export async function removeClientsFromGroup(groupId: number, clientIds: number[]) {
+    if (clientIds.length === 0) return { success: true };
+
+    await db.delete(clientGroupMembers)
+        .where(
+            and(
+                eq(clientGroupMembers.groupId, groupId),
+                inArray(clientGroupMembers.clientId, clientIds)
+            )
+        );
+
+    revalidatePath("/admin/campaigns");
+    return { success: true };
 }

@@ -12,7 +12,7 @@ import { updateClientProfile, logoutClient, deleteMyAccount, applyReferralCode }
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { LogOut, Save, MessageCircle, Trash2, AlertTriangle, FileText, Shield, Users, Copy, Check } from "lucide-react";
+import { LogOut, Save, MessageCircle, Trash2, AlertTriangle, FileText, Shield, Users, Copy, Check, Share2 } from "lucide-react";
 import type { Client } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,9 +36,14 @@ interface ProfileClientProps {
         };
     };
     avatars: string[];
+    referralProgress: {
+        usedThisMonth: number;
+        limit: number;
+        shareMessage: string;
+    };
 }
 
-export function ProfileClient({ client, avatars }: ProfileClientProps) {
+export function ProfileClient({ client, avatars, referralProgress }: ProfileClientProps) {
     const router = useRouter();
     const { openModal, closeModal, isOpen } = useModalStore();
     const [username, setUsername] = useState(client.username);
@@ -203,6 +208,10 @@ export function ProfileClient({ client, avatars }: ProfileClientProps) {
                                         Tu Código: #{client.id.toString().padStart(6, '0')}
                                     </span>
                                     <p className="text-[11px] text-muted-foreground leading-tight">Gana puntos invitando amigos.</p>
+                                    <div className="mt-2 w-full bg-border rounded-full h-1.5 overflow-hidden">
+                                        <div className="bg-primary h-full transition-all" style={{ width: `${Math.min(100, (referralProgress.usedThisMonth / referralProgress.limit) * 100)}%` }} />
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground mt-1 text-right w-full">Usos este mes: {referralProgress.usedThisMonth}/{referralProgress.limit}</p>
                                 </div>
                             </div>
                             <Button
@@ -210,15 +219,27 @@ export function ProfileClient({ client, avatars }: ProfileClientProps) {
                                 size="sm"
                                 onClick={() => {
                                     const paddedId = client.id.toString().padStart(6, '0');
-                                    navigator.clipboard.writeText(paddedId);
-                                    const prevMsg = message;
-                                    setMessage("¡Código copiado!");
-                                    setTimeout(() => setMessage(prevMsg), 2000);
+                                    const referLink = `${window.location.origin}/register?ref=${paddedId}`;
+                                    const rawMessage = referralProgress.shareMessage
+                                        .replace("{{link}}", referLink)
+                                        .replace("{{username}}", client.username);
+
+                                    if (navigator.share) {
+                                        navigator.share({
+                                            title: 'Únete a Crew Zingy',
+                                            text: rawMessage,
+                                        }).catch(console.error);
+                                    } else {
+                                        navigator.clipboard.writeText(rawMessage);
+                                        const prevMsg = message;
+                                        setMessage("¡Mensaje y link copiados al portapapeles!");
+                                        setTimeout(() => setMessage(prevMsg), 2000);
+                                    }
                                 }}
                                 className="h-9 sm:h-8 rounded-lg px-4 sm:px-3 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10 transition-all font-bold w-full sm:w-auto shrink-0"
                             >
-                                <Copy size={14} />
-                                Copiar
+                                <Share2 size={14} />
+                                Compartir
                             </Button>
                         </div>
 

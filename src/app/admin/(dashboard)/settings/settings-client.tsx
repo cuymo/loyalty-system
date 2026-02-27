@@ -26,9 +26,6 @@ const settingLabels: Record<string, string> = {
     client_notice: "Aviso para Clientes (Obsoleto, usar los de abajo)",
     notice_auth: "Aviso a clientes (iniciados sesión)",
     notice_guest: "Aviso a clientes (invitados)",
-    referral_bonus_referrer: "Bono de puntos por Referir (Regalador)",
-    referral_bonus_referred: "Bono de puntos por ser Referido (Regalado)",
-    referral_max_limit: "Límite máximo de referencias exitosas por usuario",
     birthday_bonus_points: "Puntos de Regalo por Cumpleaños",
 };
 
@@ -130,7 +127,9 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
                                 s.key !== "client_notice" &&
                                 s.key !== "admin_alert_preferences" &&
                                 s.key !== "points_expiration_days" &&
-                                !s.key.startsWith("tier_")
+                                !s.key.startsWith("tier_") &&
+                                !s.key.startsWith("ref_") &&
+                                !s.key.startsWith("referral_")
                         )
                         .map((setting) => (
                             <div

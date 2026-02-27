@@ -26,6 +26,7 @@ import { readdir } from "fs/promises";
 import { join } from "path";
 import { triggerWebhook } from "@/lib/webhook";
 import { eventBus } from "@/lib/events";
+import { processReferral } from "./referrals";
 
 // ============================================
 // SETTINGS GLOBALES
@@ -358,7 +359,6 @@ export async function registerClient(data: {
 
     // Handle Referral logic
     let validReferrer = false;
-    let referrerData = null;
 
     if (data.referredByCode) {
         const [referrer] = await db
@@ -369,21 +369,9 @@ export async function registerClient(data: {
 
         if (referrer) {
             validReferrer = true;
-            referrerData = referrer;
         } else {
             return { success: false, error: "El código de referido ingresado no existe." };
         }
-    }
-
-    let referralBonusReferred = 0;
-    let referralBonusReferrer = 0;
-    let referralMaxLimit = 0;
-
-    if (validReferrer) {
-        const pubSettings = await getPublicSettings();
-        referralBonusReferred = parseInt(pubSettings.referral_bonus_referred || "50");
-        referralBonusReferrer = parseInt(pubSettings.referral_bonus_referrer || "100");
-        referralMaxLimit = parseInt(pubSettings.referral_max_limit || "5");
     }
 
     const [newClient] = await db
@@ -393,46 +381,26 @@ export async function registerClient(data: {
             username: data.username,
             avatarSvg: data.avatarSvg,
             birthDate: data.birthDate,
-            referredBy: validReferrer ? data.referredByCode : null,
-            points: validReferrer ? referralBonusReferred : 0,
-            lifetimePoints: validReferrer ? referralBonusReferred : 0,
+            referredBy: null, // assigned by processReferral
+            points: 0,
+            lifetimePoints: 0,
             wantsMarketing: data.wantsMarketing ?? true,
             wantsTransactional: data.wantsTransactional ?? true,
         })
         .$returningId();
 
-    // Reward referrer if limit not exceeded
-    if (validReferrer && referrerData) {
-        const newCount = referrerData.referralCount + 1;
-        const pointsToAdd = newCount <= referralMaxLimit ? referralBonusReferrer : 0;
+    let referralBonusReferred = 0;
 
-        await db.update(clients)
-            .set({
-                referralCount: newCount,
-                points: sql`${clients.points} + ${pointsToAdd}`,
-                lifetimePoints: sql`${clients.lifetimePoints} + ${pointsToAdd}`
-            })
-            .where(eq(clients.id, referrerData.id));
-
-        if (referrerData.wantsTransactional) {
-            await triggerWebhook("cliente.referido", {
-                referrerId: referrerData.id,
-                referrerUsername: referrerData.username,
-                newClientId: newClient.id,
-                newClientUsername: data.username,
-                pointsAwardedToReferrer: pointsToAdd,
-                pointsAwardedToReferred: referralBonusReferred
+    if (validReferrer) {
+        try {
+            await db.transaction(async (tx) => {
+                const result = await processReferral(tx, data.referredByCode!, newClient.id, false);
+                if (result.success && result.pointsReferred) {
+                    referralBonusReferred = result.pointsReferred;
+                }
             });
-        }
-
-        if (pointsToAdd > 0) {
-            await db.insert(appNotifications).values({
-                clientId: referrerData.id,
-                title: "¡Alguien usó tu código!",
-                body: `${data.username} se registró usando tu código. ¡Acabas de ganar ${pointsToAdd} puntos!`,
-                isRead: false,
-                type: "referral_success"
-            });
+        } catch (e) {
+            console.error("Error al procesar referido en registro:", e);
         }
     }
 
@@ -524,70 +492,17 @@ export async function applyReferralCode(code: string) {
         return { success: false, error: "El código de referido no existe" };
     }
 
-    const pubSettings = await getPublicSettings();
-    const bonusReferred = parseInt(pubSettings.referral_bonus_referred || "50");
-    const bonusReferrer = parseInt(pubSettings.referral_bonus_referrer || "100");
-    const maxLimit = parseInt(pubSettings.referral_max_limit || "5");
-
     try {
         await db.transaction(async (tx) => {
-            // Actualizar cliente (quien canjea)
-            await tx.update(clients)
-                .set({
-                    referredBy: referrerId,
-                    points: sql`${clients.points} + ${bonusReferred}`,
-                    lifetimePoints: sql`${clients.lifetimePoints} + ${bonusReferred}`
-                })
-                .where(eq(clients.id, session.clientId));
-
-            // Actualizar invitador
-            const pointsForReferrer = (referrer.referralCount + 1 <= maxLimit) ? bonusReferrer : 0;
-
-            await tx.update(clients)
-                .set({
-                    referralCount: sql`${clients.referralCount} + 1`,
-                    points: sql`${clients.points} + ${pointsForReferrer}`,
-                    lifetimePoints: sql`${clients.lifetimePoints} + ${pointsForReferrer}`
-                })
-                .where(eq(clients.id, referrerId));
-
-            // Notificaciones
-            await tx.insert(appNotifications).values({
-                clientId: session.clientId,
-                title: "Código de Invitación Aplicado",
-                body: `¡Felicidades! Has ganado ${bonusReferred} puntos por usar el código de ${referrer.username}.`,
-                isRead: false,
-                type: "referral_success"
-            });
-
-            if (pointsForReferrer > 0) {
-                await tx.insert(appNotifications).values({
-                    clientId: referrerId,
-                    title: "¡Bono de Invitación!",
-                    body: `${client.username} usó tu código de invitación. ¡Ganaste ${pointsForReferrer} puntos!`,
-                    isRead: false,
-                    type: "referral_success"
-                });
-            }
-
-            if (referrer.wantsTransactional || client.wantsTransactional) {
-                await triggerWebhook("cliente.referido", {
-                    referrerId,
-                    referrerUsername: referrer.username,
-                    newClientId: session.clientId,
-                    newClientUsername: client.username,
-                    pointsAwardedToReferrer: pointsForReferrer,
-                    pointsAwardedToReferred: bonusReferred,
-                    isPostRegistration: true
-                });
-            }
+            const result = await processReferral(tx, referrerId, session.clientId, true);
+            if (!result.success) throw new Error(result.error);
         });
 
         revalidatePath("/");
         return { success: true };
-    } catch (e) {
+    } catch (e: any) {
         console.error("Error al aplicar referido:", e);
-        return { success: false, error: "Error interno al procesar el código" };
+        return { success: false, error: e.message || "Error interno al procesar el código" };
     }
 }
 

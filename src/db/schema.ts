@@ -174,3 +174,46 @@ export const adminNotifications = mysqlTable("admin_notifications", {
     isRead: boolean().notNull().default(false),
     createdAt: timestamp().defaultNow().notNull(),
 });
+
+// ============================================
+// TABLA: client_groups
+// Grupos de segmentación de clientes
+// ============================================
+export const clientGroups = mysqlTable("client_groups", {
+    id: serial().primaryKey(),
+    name: varchar({ length: 100 }).notNull(),
+    description: text(),
+    createdAt: timestamp().defaultNow().notNull(),
+});
+
+// ============================================
+// TABLA: client_group_members
+// Relación muchos a muchos (Clientes <-> Grupos)
+// ============================================
+export const clientGroupMembers = mysqlTable("client_group_members", {
+    id: serial().primaryKey(),
+    groupId: bigint({ mode: "number", unsigned: true })
+        .notNull()
+        .references(() => clientGroups.id, { onDelete: 'cascade' }),
+    clientId: bigint({ mode: "number", unsigned: true })
+        .notNull()
+        .references(() => clients.id, { onDelete: 'cascade' }),
+    createdAt: timestamp().defaultNow().notNull(),
+});
+
+// ============================================
+// TABLA: referral_history
+// Registro histórico de invitaciones exitosas
+// ============================================
+export const referralHistory = mysqlTable("referral_history", {
+    id: serial().primaryKey(),
+    referrerId: bigint({ mode: "number", unsigned: true })
+        .notNull()
+        .references(() => clients.id, { onDelete: 'cascade' }),
+    referredId: bigint({ mode: "number", unsigned: true })
+        .notNull()
+        .references(() => clients.id, { onDelete: 'cascade' }),
+    pointsReferrer: int().notNull().default(0),
+    pointsReferred: int().notNull().default(0),
+    createdAt: timestamp().defaultNow().notNull(),
+});
