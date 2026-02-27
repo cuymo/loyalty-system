@@ -16,9 +16,13 @@ export async function getReferralProgress(clientId: number) {
 
     // Default values
     const enabled = set.ref_enabled === "true";
-    const baseGoal = parseInt(set.ref_goal_base || "3");
-    const increment = parseInt(set.ref_goal_increment || "2");
     const shareMessage = set.ref_share_message || "Usa mi link: {{link}}";
+    const milestonesStr = set.ref_milestones || '[{"id":1,"amount":3,"reward":50}]';
+    let milestones = [];
+    try { milestones = JSON.parse(milestonesStr); } catch { milestones = [{ "id": 1, "amount": 3, "reward": 50 }]; }
+
+    // Sort by amount ascending to ensure sequential logic
+    milestones.sort((a: any, b: any) => a.amount - b.amount);
 
     // Contar cuántos ha recibido o dado HISTÓRICAMENTE como referrer
     const allReferralsAsReferrer = await db.select().from(referralHistory)
@@ -27,22 +31,28 @@ export async function getReferralProgress(clientId: number) {
     const totalRef = allReferralsAsReferrer.length;
 
     // Calcular en qué ciclo de meta está
-    let currentCycle = 1;
-    let referralsNeededForCurrentCycle = baseGoal;
-    let totalAccounted = 0;
-
-    while (totalRef >= totalAccounted + referralsNeededForCurrentCycle) {
-        totalAccounted += referralsNeededForCurrentCycle;
-        currentCycle++;
-        referralsNeededForCurrentCycle = baseGoal + (currentCycle - 1) * increment;
+    let currentCycleIndex = 0;
+    while (currentCycleIndex < milestones.length) {
+        if (totalRef < milestones[currentCycleIndex].amount) {
+            break;
+        }
+        currentCycleIndex++;
     }
 
-    const progressInCurrentCycle = totalRef - totalAccounted;
+    // Default to the last milestone logic if they exceeded all
+    const activeMilestone = milestones[currentCycleIndex] || milestones[milestones.length - 1];
+    const previousMilestoneAmount = currentCycleIndex > 0 ? milestones[Math.min(currentCycleIndex - 1, milestones.length - 1)].amount : 0;
+
+    // Si ya completó TODO, podemos dejar limit=amount y expected=amount, o manejar overflow.
+    // Usaremos "Progreso dentro del lote actual"
+    const totalAccounted = currentCycleIndex >= milestones.length ? 0 : previousMilestoneAmount;
+    const progressInCurrentCycle = currentCycleIndex >= milestones.length ? activeMilestone.amount : totalRef - totalAccounted;
+    const limitForCurrentCycle = currentCycleIndex >= milestones.length ? activeMilestone.amount : activeMilestone.amount - totalAccounted;
 
     return {
         enabled,
-        usedThisMonth: progressInCurrentCycle, // Renombrado lógicamente para ui, pero es el progreso actual
-        limit: referralsNeededForCurrentCycle,
+        usedThisMonth: progressInCurrentCycle,
+        limit: limitForCurrentCycle,
         shareMessage
     };
 }
@@ -68,30 +78,23 @@ export async function processReferral(tx: any, referrerId: number, referredId: n
     const allReferralsAsReferrer = await tx.select().from(referralHistory)
         .where(eq(referralHistory.referrerId, referrerId));
 
-    const totalRef = allReferralsAsReferrer.length;
-    const baseGoal = parseInt(set.ref_goal_base || "3");
-    const increment = parseInt(set.ref_goal_increment || "2");
+    const totalRefBefore = allReferralsAsReferrer.length;
+    const totalRefAfter = totalRefBefore + 1; // Le sumamos 1 porque es el nuevo referido actual
+
+    const milestonesStr = set.ref_milestones || '[{"id":1,"amount":3,"reward":50}]';
+    let milestones: { id: number, amount: number, reward: number }[] = [];
+    try { milestones = JSON.parse(milestonesStr); } catch { milestones = [{ id: 1, amount: 3, reward: 50 }]; }
+
+    milestones.sort((a, b) => a.amount - b.amount);
 
     const bonusReferred = parseInt(set.ref_points_referred || "1"); // 1 punto base para quien usa el código
-    const bonusReferrer = parseInt(set.ref_points_referrer || "50"); // Premio al llenar meta
-
-    // Calcular si la meta se completó con este nuevo referido (+1)
-    let currentCycle = 1;
-    let referralsNeededForCurrentCycle = baseGoal;
-    let totalAccounted = 0;
-
-    while (totalRef >= totalAccounted + referralsNeededForCurrentCycle) {
-        totalAccounted += referralsNeededForCurrentCycle;
-        currentCycle++;
-        referralsNeededForCurrentCycle = baseGoal + (currentCycle - 1) * increment;
-    }
-
-    const progressInCurrentCycle = totalRef - totalAccounted + 1; // Le sumamos 1 porque es el nuevo referido actual
     let pointsForReferrer = 0;
 
-    if (progressInCurrentCycle >= referralsNeededForCurrentCycle) {
+    // Check if totalRefAfter EXACTLY hits any milestone amount
+    const hitMilestone = milestones.find(m => m.amount === totalRefAfter);
+    if (hitMilestone) {
         // Meta alcanzada!
-        pointsForReferrer = bonusReferrer;
+        pointsForReferrer = hitMilestone.reward;
     }
 
     // Update Referrer

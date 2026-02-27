@@ -160,9 +160,8 @@ export function CampaignsClient({ initialClients, initialGroups, initialMembersh
     };
 
     const handleLaunchClick = () => {
-        // Al enviar campaña filtramos los que no quieren marketing de forma silenciosa para WA
-        // Esto está gestionado en el CRM pero le informamos al usuario:
-        openModal("campaign_creator", { selectedIds });
+        const theSelectedClients = filteredClients.filter(c => selectedIds.includes(c.id));
+        openModal("campaign_creator", { selectedIds, selectedClients: theSelectedClients });
     };
 
     const handleCreateGroup = async () => {
@@ -474,7 +473,7 @@ export function CampaignsClient({ initialClients, initialGroups, initialMembersh
 
             {/* Client Detail Modal */}
             <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
-                <DialogContent className="max-w-xl">
+                <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full rounded-2xl">
                     <DialogHeader>
                         <DialogTitle>Perfil del Cliente</DialogTitle>
                     </DialogHeader>
@@ -577,7 +576,7 @@ function CampaignsModalController() {
                         <DrawerTitle>Asistente de Campaña</DrawerTitle>
                     </DrawerHeader>
                     <div className="px-4 pb-8 overflow-y-auto max-h-[80vh]">
-                        <CampaignFormContent selectedIds={selectedIds} onClose={closeModal} />
+                        <CampaignFormContent selectedClients={data.selectedClients as CrmClient[]} onClose={closeModal} />
                     </div>
                 </DrawerContent>
             </Drawer>
@@ -586,35 +585,41 @@ function CampaignsModalController() {
 
     return (
         <Dialog open={true} onOpenChange={(open) => !open && closeModal()}>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full rounded-2xl">
                 <DialogHeader>
                     <DialogTitle>Asistente de Campaña (A {selectedIds.length} clientes)</DialogTitle>
                 </DialogHeader>
                 <div className="p-4 pt-0">
-                    <CampaignFormContent selectedIds={selectedIds} onClose={closeModal} />
+                    <CampaignFormContent selectedClients={data.selectedClients as CrmClient[]} onClose={closeModal} />
                 </div>
             </DialogContent>
         </Dialog>
     );
 }
 
-function CampaignFormContent({ selectedIds, onClose }: { selectedIds: number[], onClose: () => void }) {
+function CampaignFormContent({ selectedClients, onClose }: { selectedClients: CrmClient[], onClose: () => void }) {
     const [isProcessing, setIsProcessing] = useState(false);
     const [enablePoints, setEnablePoints] = useState(false);
     const [giftPoints, setGiftPoints] = useState<number>(0);
-    const [enableMessage, setEnableMessage] = useState(true);
+    const hasAnyNoMarketing = selectedClients.some(c => !c.wantsMarketing);
+    const [enableMessage, setEnableMessage] = useState(!hasAnyNoMarketing);
     const [msgTitle, setMsgTitle] = useState("");
     const [msgBody, setMsgBody] = useState("");
     const [msgImageUrl, setMsgImageUrl] = useState("");
 
     const handleLaunchCampaign = async () => {
+        if (!msgTitle.trim() || !msgBody.trim()) {
+            toast.error("El Título y Descripción son obligatorios.");
+            return;
+        }
+
         setIsProcessing(true);
         try {
-            const res = await processCrmCampaign(selectedIds, {
+            const res = await processCrmCampaign(selectedClients.map(c => c.id), {
                 pointsToGift: enablePoints ? giftPoints : 0,
                 sendMessage: enableMessage,
-                title: msgTitle,
-                body: msgBody,
+                title: msgTitle.trim(),
+                body: msgBody.trim(),
                 imageUrl: msgImageUrl || undefined
             });
 
@@ -635,24 +640,33 @@ function CampaignFormContent({ selectedIds, onClose }: { selectedIds: number[], 
     return (
         <div className="space-y-4">
             <div className="space-y-2">
-                <label className="text-sm font-medium">Título</label>
-                <Input value={msgTitle} onChange={e => setMsgTitle(e.target.value)} />
+                <label className="text-sm font-medium">Título (Obligatorio)</label>
+                <Input value={msgTitle} onChange={e => setMsgTitle(e.target.value)} placeholder="Ej. ¡Feliz Aniversario!" />
             </div>
             <div className="space-y-2">
-                <label className="text-sm font-medium">Mensaje</label>
-                <Textarea value={msgBody} onChange={e => setMsgBody(e.target.value)} />
+                <label className="text-sm font-medium">Mensaje (Obligatorio)</label>
+                <Textarea value={msgBody} onChange={e => setMsgBody(e.target.value)} placeholder="Ej. Tienes un regalo especial esperándote. Muéstranos este mensaje." />
             </div>
             <div className="space-y-2">
-                <label className="text-sm font-medium">URL de Imagen (Opcional)</label>
-                <Input value={msgImageUrl} onChange={e => setMsgImageUrl(e.target.value)} />
+                <label className="text-sm font-medium">URL de Imagen (Opcional para WhatsApp)</label>
+                <Input value={msgImageUrl} onChange={e => setMsgImageUrl(e.target.value)} placeholder="https://..." />
             </div>
             <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
-                    <span className="text-sm flex gap-2"><Send size={16} />Push de Mensaje</span>
-                    <Checkbox checked={enableMessage} onCheckedChange={(checked) => setEnableMessage(checked === true)} />
+                <div className={`flex flex-col p-3 bg-muted/50 rounded-lg border ${hasAnyNoMarketing ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm flex gap-2 font-semibold"><MessageCircle size={16} className="text-[#25D366]" />Enviar por WhatsApp</span>
+                        <Checkbox checked={enableMessage} onCheckedChange={(checked) => setEnableMessage(checked === true)} disabled={hasAnyNoMarketing} />
+                    </div>
+                    {hasAnyNoMarketing && (
+                        <p className="text-xs text-warning font-medium mt-1">
+                            Deshabilitado: Al menos un cliente destino no permite envíos de marketing de WhatsApp.
+                        </p>
+                    )}
                 </div>
                 <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
-                    <span className="text-sm flex items-center gap-2"><Gift size={16} />Acreditar Puntos: <Input type="number" className="w-20 h-8 ml-2" value={giftPoints || ''} onChange={(e) => setGiftPoints(Number(e.target.value))} disabled={!enablePoints} /></span>
+                    <span className="text-sm flex items-center gap-2 font-semibold"><Gift size={16} className="text-primary" />Acreditar Puntos Acoplados:
+                        <Input type="number" className="w-20 h-8 ml-2" value={giftPoints || ''} onChange={(e) => setGiftPoints(Number(e.target.value))} disabled={!enablePoints} placeholder="0" />
+                    </span>
                     <Checkbox checked={enablePoints} onCheckedChange={(checked) => setEnablePoints(checked === true)} />
                 </div>
             </div>

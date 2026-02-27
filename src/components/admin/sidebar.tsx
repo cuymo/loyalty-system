@@ -208,7 +208,7 @@ export function AdminSidebar() {
             setHasUnread(mapped.some(n => !n.isRead));
         });
 
-        const eventSource = new EventSource("/api/admin/sse");
+        const eventSource = new EventSource("/api/admin/sse", { withCredentials: true });
 
         eventSource.onmessage = (event) => {
             try {
@@ -231,17 +231,6 @@ export function AdminSidebar() {
 
                     // Smart Sounds
                     if (prefs.sound) {
-                        playClick();
-                    }
-                } else {
-                    // Legacy fallback for old events that aren't mapped
-                    if (data.type === "new_client" || data.type === "client_registered") {
-                        toast.success(data.message, { duration: 5000 });
-                        playClick();
-                    } else if (data.type === "points_added") {
-                        toast.info(data.message, { duration: 5000 });
-                    } else if (data.type === "new_redemption" || data.type === "reward_redemption") {
-                        toast.warning(data.message, { duration: 10000 });
                         playClick();
                     }
                 }
