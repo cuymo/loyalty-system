@@ -478,34 +478,16 @@ export function CampaignsClient({ initialClients, initialGroups, initialMembersh
 
 function CampaignsModalController() {
     const { activeModal, data, closeModal } = useModalStore();
-    const isMobile = useIsMobile();
     if (activeModal !== "campaign_creator") return null;
     const selectedIds = data.selectedIds as number[];
-
-    if (isMobile) {
-        return (
-            <Drawer open={true} onOpenChange={(open) => !open && closeModal()}>
-                <DrawerContent>
-                    <DrawerHeader>
-                        <DrawerTitle>Asistente de Campaña</DrawerTitle>
-                    </DrawerHeader>
-                    <div className="px-4 pb-8 overflow-y-auto max-h-[80vh]">
-                        <CampaignFormContent selectedClients={data.selectedClients as CrmClient[]} onClose={closeModal} />
-                    </div>
-                </DrawerContent>
-            </Drawer>
-        );
-    }
 
     return (
         <Dialog open={true} onOpenChange={(open) => !open && closeModal()}>
             <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full rounded-2xl">
                 <DialogHeader>
-                    <DialogTitle>Asistente de Campaña (A {selectedIds.length} clientes)</DialogTitle>
+                    <DialogTitle>Asistente de Campaña ({selectedIds.length} clientes)</DialogTitle>
                 </DialogHeader>
-                <div className="p-4 pt-0">
-                    <CampaignFormContent selectedClients={data.selectedClients as CrmClient[]} onClose={closeModal} />
-                </div>
+                <CampaignFormContent selectedClients={data.selectedClients as CrmClient[]} onClose={closeModal} />
             </DialogContent>
         </Dialog>
     );

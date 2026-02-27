@@ -47,7 +47,8 @@ export function ReferralsClient({ initialSettings, history }: ReferralsClientPro
         const val = initialSettings.find(s => s.key === "ref_milestones")?.value;
         if (!val) return [{ id: 1, amount: 3, reward: 50 }];
         try {
-            return JSON.parse(val);
+            const parsed = JSON.parse(val);
+            return parsed.length > 0 ? parsed : [{ id: 1, amount: 3, reward: 50 }];
         } catch {
             return [{ id: 1, amount: 3, reward: 50 }];
         }
@@ -72,6 +73,19 @@ export function ReferralsClient({ initialSettings, history }: ReferralsClientPro
         }
     };
 
+    const handleSaveMessage = async () => {
+        setIsLoading(true);
+        try {
+            await updateReferralSettings([{ key: "ref_share_message", value: settings.ref_share_message || "" }]);
+            toast.success("Mensaje de invitación guardado");
+            router.refresh();
+        } catch {
+            toast.error("Error al guardar");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const addMilestone = () => {
         const lastAmount = milestones.length > 0 ? milestones[milestones.length - 1].amount : 0;
         setMilestones([...milestones, { id: Date.now(), amount: lastAmount + 2, reward: 50 }]);
@@ -83,22 +97,28 @@ export function ReferralsClient({ initialSettings, history }: ReferralsClientPro
     };
 
     const removeMilestone = (id: number) => {
+        if (milestones.length <= 1) {
+            toast.error("Debe existir al menos una meta. Si deseas desactivar, usa Activación General.");
+            return;
+        }
+        // No permitir eliminar la Meta 1 (index 0)
+        const index = milestones.findIndex(m => m.id === id);
+        if (index === 0) {
+            toast.error("La Meta 1 es obligatoria y no se puede eliminar.");
+            return;
+        }
         setMilestones(prev => prev.filter(m => m.id !== id));
     };
 
     return (
         <Tabs defaultValue="config" className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
-                <TabsList>
-                    <TabsTrigger value="config">Configuración</TabsTrigger>
-                    <TabsTrigger value="history">Historial</TabsTrigger>
-                </TabsList>
-                <Button onClick={handleSave} disabled={isLoading}>
-                    <Save className="w-4 h-4 mr-2" />
-                    {isLoading ? "Guardando..." : "Guardar Configuración"}
-                </Button>
-            </div>
+            <TabsList>
+                <TabsTrigger value="config">Configuración</TabsTrigger>
+                <TabsTrigger value="message">Mensaje</TabsTrigger>
+                <TabsTrigger value="history">Historial</TabsTrigger>
+            </TabsList>
 
+            {/* ---- TAB: Configuración ---- */}
             <TabsContent value="config" className="space-y-6 mt-0">
                 <div className="flex items-center justify-between p-4 md:p-6 bg-card border rounded-xl">
                     <div>
@@ -118,28 +138,28 @@ export function ReferralsClient({ initialSettings, history }: ReferralsClientPro
                     </div>
                     <div className="p-4 md:p-6 space-y-4">
                         <div className="space-y-3">
-                            {milestones.length === 0 ? (
-                                <p className="text-sm text-muted-foreground p-4 text-center border border-dashed rounded-lg">No hay metas configuradas. Crea una.</p>
-                            ) : (
-                                milestones.map((m, index) => (
-                                    <div key={m.id} className="flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-muted/10 border rounded-lg">
-                                        <Badge variant="outline" className="shrink-0 bg-background">Meta {index + 1}</Badge>
-                                        <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Referidos Totales Requeridos</label>
-                                                <Input type="number" min={1} value={m.amount || ''} onChange={e => updateMilestone(m.id, 'amount', e.target.value)} className="bg-background" />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Puntos de Premio</label>
-                                                <Input type="number" min={0} value={m.reward || ''} onChange={e => updateMilestone(m.id, 'reward', e.target.value)} className="bg-background" />
-                                            </div>
+                            {milestones.map((m, index) => (
+                                <div key={m.id} className="flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-muted/10 border rounded-lg">
+                                    <Badge variant="outline" className="shrink-0 bg-background">Meta {index + 1}</Badge>
+                                    <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Referidos Totales Requeridos</label>
+                                            <Input type="number" min={1} value={m.amount || ''} onChange={e => updateMilestone(m.id, 'amount', e.target.value)} className="bg-background" />
                                         </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Puntos de Premio</label>
+                                            <Input type="number" min={0} value={m.reward || ''} onChange={e => updateMilestone(m.id, 'reward', e.target.value)} className="bg-background" />
+                                        </div>
+                                    </div>
+                                    {index === 0 ? (
+                                        <div className="sm:mt-5 shrink-0 w-9" />
+                                    ) : (
                                         <Button variant="ghost" size="icon" onClick={() => removeMilestone(m.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10 sm:mt-5 shrink-0">
                                             <Trash size={18} />
                                         </Button>
-                                    </div>
-                                ))
-                            )}
+                                    )}
+                                </div>
+                            ))}
                             <Button variant="outline" onClick={addMilestone} className="w-full border-dashed"><Plus size={16} className="mr-2" /> Añadir Meta Secuencial</Button>
                         </div>
 
@@ -157,6 +177,14 @@ export function ReferralsClient({ initialSettings, history }: ReferralsClientPro
                     </div>
                 </div>
 
+                <Button onClick={handleSave} disabled={isLoading} className="w-full sm:w-auto">
+                    <Save className="w-4 h-4 mr-2" />
+                    {isLoading ? "Guardando..." : "Guardar Configuración"}
+                </Button>
+            </TabsContent>
+
+            {/* ---- TAB: Mensaje de Invitación ---- */}
+            <TabsContent value="message" className="space-y-6 mt-0">
                 <div className="bg-card border rounded-xl overflow-hidden">
                     <div className="p-4 md:p-6 border-b bg-muted/20">
                         <h3 className="text-lg font-bold flex items-center gap-2"><Users size={20} className="text-primary" /> Mensaje de Invitación</h3>
@@ -173,8 +201,14 @@ export function ReferralsClient({ initialSettings, history }: ReferralsClientPro
                         <p className="text-xs text-muted-foreground mt-2 inline-flex items-center gap-1">La palabra <b className="font-mono text-[10px] bg-muted px-1 py-0.5 rounded">{`{{link}}`}</b> será reemplazada automáticamente por el enlace único del cliente.</p>
                     </div>
                 </div>
+
+                <Button onClick={handleSaveMessage} disabled={isLoading} className="w-full sm:w-auto">
+                    <Save className="w-4 h-4 mr-2" />
+                    {isLoading ? "Guardando..." : "Guardar Mensaje"}
+                </Button>
             </TabsContent>
 
+            {/* ---- TAB: Historial ---- */}
             <TabsContent value="history" className="mt-0">
                 <div className="bg-card border rounded-xl overflow-hidden">
                     <div className="p-4 md:p-6 border-b bg-muted/20">
