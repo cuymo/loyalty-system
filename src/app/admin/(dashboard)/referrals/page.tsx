@@ -13,17 +13,15 @@ export default async function ReferralsPage() {
     const history = await getReferralHistory();
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                    Referidos
-                </h1>
+        <div className="p-4 md:p-8 space-y-6">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl md:text-3xl font-bold text-foreground">Referidos</h1>
+                    <p className="text-muted-foreground mt-1">
+                        Control absoluto sobre el programa de invitaciones. Configura las reglas, los premios, y visualiza el historial en tiempo real de quién ha invitado a quién para prevenir fraudes.
+                    </p>
+                </div>
             </div>
-
-            <p className="text-muted-foreground text-sm max-w-2xl">
-                Control absoluto sobre el programa de invitaciones. Configura las reglas, los premios, y visualiza el historial en tiempo real de quién ha invitado a quién para prevenir fraudes.
-            </p>
-
             <ReferralsClient initialSettings={settings} history={history} />
         </div>
     );

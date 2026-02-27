@@ -81,11 +81,7 @@ export function ReferralsClient({ initialSettings, history }: ReferralsClientPro
     };
 
     return (
-        <div className="space-y-8 pb-12">
-            <div>
-                <h2 className="text-2xl font-bold mb-1">Programa de Referidos</h2>
-                <p className="text-muted-foreground">Gestiona las recompensas por invitaciones y analiza el historial.</p>
-            </div>
+        <div className="space-y-6 pb-12">
 
             <div className="flex items-center justify-between p-4 md:p-6 bg-card border rounded-xl shadow-sm">
                 <div>

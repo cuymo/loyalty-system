@@ -232,15 +232,7 @@ export function CampaignsClient({ initialClients, initialGroups, initialMembersh
     };
 
     return (
-        <div className="p-4 md:p-8 space-y-6 flex flex-col h-[calc(100vh-4rem)] md:h-screen">
-            <div>
-                <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-                    Campañas y Grupos
-                </h1>
-                <p className="text-muted-foreground mt-1 text-sm md:text-base">
-                    Gestión de envíos y segmentación de clientes.
-                </p>
-            </div>
+        <div className="space-y-6 flex flex-col flex-1 min-h-0">
 
             <div className="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center shrink-0">
                 <div className="flex flex-wrap gap-2 w-full sm:w-auto">
@@ -654,7 +646,7 @@ function CampaignFormContent({ selectedClients, onClose }: { selectedClients: Cr
             <div className="space-y-3 pt-2">
                 <div className={`flex flex-col p-3 bg-muted/50 rounded-lg border ${hasAnyNoMarketing ? 'opacity-60 cursor-not-allowed' : ''}`}>
                     <div className="flex items-center justify-between">
-                        <span className="text-sm flex gap-2 font-semibold"><MessageCircle size={16} className="text-[#25D366]" />Enviar por WhatsApp</span>
+                        <span className="text-sm flex items-center gap-2 font-semibold"><MessageCircle size={16} className="text-[#25D366]" />Enviar por WhatsApp</span>
                         <Checkbox checked={enableMessage} onCheckedChange={(checked) => setEnableMessage(checked === true)} disabled={hasAnyNoMarketing} />
                     </div>
                     {hasAnyNoMarketing && (

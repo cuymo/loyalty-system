@@ -1,0 +1,11 @@
+crew-zingy@0.1.0 C:\Users\https\OneDrive\Escritorio\crew-zingy
+└─┬ drizzle-kit@0.31.9
+  └─┬ @esbuild-kit/esm-loader@2.6.5
+    └── @esbuild-kit/core-utils@3.3.2
+
+crew-zingy@0.1.0 C:\Users\https\OneDrive\Escritorio\crew-zingy
+└─┬ shadcn@3.8.5
+  └─┬ node-fetch@3.3.2
+    └─┬ fetch-blob@3.2.0
+      └── node-domexception@1.0.0
+
