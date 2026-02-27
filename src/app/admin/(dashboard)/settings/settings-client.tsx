@@ -10,7 +10,7 @@
 import { useState } from "react";
 import { updateSetting, dangerZoneReset } from "@/actions/admin";
 import { useRouter } from "next/navigation";
-import { Save, AlertTriangle, Bell, BellOff, Volume2, VolumeX } from "lucide-react";
+import { Save, AlertTriangle, Bell, BellOff, Volume2, VolumeX, Gift, MessageSquare, Settings as SettingsIcon } from "lucide-react";
 import { toast } from "@/lib/toast";
 import type { Setting } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -106,6 +106,63 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
         }
     };
 
+    const filteredSettings = settings.filter(
+        (s) =>
+            s.key !== "typebot_id" &&
+            s.key !== "typebot_api_host" &&
+            s.key !== "typebot_url" &&
+            s.key !== "webhook_urls" &&
+            s.key !== "webhook_global_url" &&
+            s.key !== "client_notice" &&
+            s.key !== "admin_alert_preferences" &&
+            s.key !== "points_expiration_days" &&
+            !s.key.startsWith("tier_") &&
+            !s.key.startsWith("ref_") &&
+            !s.key.startsWith("referral_")
+    );
+
+    const messageSettings = filteredSettings.filter(s => ["notice_auth", "notice_guest"].includes(s.key));
+    const rewardSettings = filteredSettings.filter(s => ["birthday_bonus_points"].includes(s.key));
+    const otherSettings = filteredSettings.filter(s => !messageSettings.includes(s) && !rewardSettings.includes(s));
+
+    const renderSetting = (setting: Setting) => (
+        <Card key={setting.id} className="border-border shadow-sm flex flex-col">
+            <CardHeader className="pb-3 border-b border-border/50 bg-muted/20">
+                <CardTitle className="text-sm font-semibold text-foreground">
+                    {settingLabels[setting.key] || setting.key}
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4 flex-1 flex flex-col gap-4">
+                {(setting.key === "notice_auth" || setting.key === "notice_guest") ? (
+                    <textarea
+                        value={setting.value || ""}
+                        onChange={(e) => setSettings(settings.map((s) => s.id === setting.id ? { ...s, value: e.target.value } : s))}
+                        rows={3}
+                        placeholder={`Escribe aquí el ${settingLabels[setting.key]?.toLowerCase() || 'aviso'}`}
+                        className="w-full h-full min-h-[100px] px-4 py-3 bg-muted/40 text-foreground border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none transition-all"
+                    />
+                ) : (
+                    <input
+                        value={setting.value || ""}
+                        onChange={(e) => setSettings(settings.map((s) => s.id === setting.id ? { ...s, value: e.target.value } : s))}
+                        placeholder={`Valor para ${settingLabels[setting.key] || setting.key}`}
+                        className="w-full px-4 py-2.5 bg-muted/40 text-foreground border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium"
+                    />
+                )}
+                <div className="flex justify-end mt-auto pt-2">
+                    <Button
+                        onClick={() => handleSave(setting.key, settings.find((s) => s.id === setting.id)?.value || "")}
+                        disabled={isLoading}
+                        size="sm"
+                        className="transition-all active:scale-95 shadow-sm"
+                    >
+                        <Save className="w-4 h-4 mr-2" /> Guardar
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+    );
+
     return (
         <Tabs defaultValue="general" className="space-y-6">
             <TabsList className="bg-muted p-1">
@@ -113,82 +170,42 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
                 <TabsTrigger value="alerts" className="font-medium">Preferencias Sensoriales</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="general" className="mt-4 space-y-8 text-foreground">
-                {/* Settings */}
-                <div className="space-y-4">
-                    {settings
-                        .filter(
-                            (s) =>
-                                s.key !== "typebot_id" &&
-                                s.key !== "typebot_api_host" &&
-                                s.key !== "typebot_url" &&
-                                s.key !== "webhook_urls" &&
-                                s.key !== "webhook_global_url" &&
-                                s.key !== "client_notice" &&
-                                s.key !== "admin_alert_preferences" &&
-                                s.key !== "points_expiration_days" &&
-                                !s.key.startsWith("tier_") &&
-                                !s.key.startsWith("ref_") &&
-                                !s.key.startsWith("referral_")
-                        )
-                        .map((setting) => (
-                            <div
-                                key={setting.id}
-                                className="bg-card border border-border rounded-xl p-6"
-                            >
-                                <label className="text-sm font-medium text-muted-foreground block mb-3">
-                                    {settingLabels[setting.key] || setting.key}
-                                </label>
-                                <div className="flex gap-3 items-start">
-                                    {setting.key === "notice_auth" ||
-                                        setting.key === "notice_guest" ||
-                                        setting.key === "client_notice" ? (
-                                        <textarea
-                                            value={setting.value || ""}
-                                            onChange={(e) => {
-                                                setSettings(
-                                                    settings.map((s) =>
-                                                        s.id === setting.id
-                                                            ? { ...s, value: e.target.value }
-                                                            : s
-                                                    )
-                                                );
-                                            }}
-                                            rows={3}
-                                            className="flex-1 px-4 py-2.5 bg-accent text-accent-foreground border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-white/20 resize-none"
-                                        />
-                                    ) : (
-                                        <input
-                                            value={setting.value || ""}
-                                            onChange={(e) => {
-                                                setSettings(
-                                                    settings.map((s) =>
-                                                        s.id === setting.id
-                                                            ? { ...s, value: e.target.value }
-                                                            : s
-                                                    )
-                                                );
-                                            }}
-                                            className="flex-1 px-4 py-2.5 bg-accent text-accent-foreground border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
-                                        />
-                                    )}
-                                    <Button
-                                        onClick={() =>
-                                            handleSave(
-                                                setting.key,
-                                                settings.find((s) => s.id === setting.id)
-                                                    ?.value || ""
-                                            )
-                                        }
-                                        disabled={isLoading}
-                                        className="h-[44px] px-4"
-                                    >
-                                        <Save className="w-4 h-4" />
-                                    </Button>
-                                </div>
-                            </div>
-                        ))}
-                </div>
+            <TabsContent value="general" className="mt-4 space-y-10 text-foreground pb-12">
+
+                {rewardSettings.length > 0 && (
+                    <section className="space-y-4">
+                        <div className="space-y-1 border-b pb-2">
+                            <h3 className="text-lg font-semibold flex items-center gap-2"><Gift className="w-5 h-5 text-primary" /> Recompensas y Regalos</h3>
+                            <p className="text-sm text-muted-foreground">Incentivos y puntos que el sistema otorga automáticamente.</p>
+                        </div>
+                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            {rewardSettings.map(renderSetting)}
+                        </div>
+                    </section>
+                )}
+
+                {messageSettings.length > 0 && (
+                    <section className="space-y-4">
+                        <div className="space-y-1 border-b pb-2">
+                            <h3 className="text-lg font-semibold flex items-center gap-2"><MessageSquare className="w-5 h-5 text-primary" /> Avisos al Cliente</h3>
+                            <p className="text-sm text-muted-foreground">Textos descriptivos y banners mostrados en la App al usuario.</p>
+                        </div>
+                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            {messageSettings.map(renderSetting)}
+                        </div>
+                    </section>
+                )}
+
+                {otherSettings.length > 0 && (
+                    <section className="space-y-4">
+                        <div className="space-y-1 border-b pb-2">
+                            <h3 className="text-lg font-semibold flex items-center gap-2"><SettingsIcon className="w-5 h-5 text-primary" /> Otros Ajustes</h3>
+                        </div>
+                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            {otherSettings.map(renderSetting)}
+                        </div>
+                    </section>
+                )}
 
                 {/* Danger Zone */}
                 <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-6 space-y-4">
