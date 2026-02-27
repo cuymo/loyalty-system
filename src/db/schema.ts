@@ -219,3 +219,19 @@ export const referralHistory = mysqlTable("referral_history", {
     pointsReferred: int().notNull().default(0),
     createdAt: timestamp().defaultNow().notNull(),
 });
+
+// ============================================
+// TABLA: campaigns_history
+// Registro de campañas enviadas masivamente
+// ============================================
+export const campaignsHistory = mysqlTable("campaigns_history", {
+    id: serial().primaryKey(),
+    title: varchar({ length: 255 }).notNull(),
+    body: text().notNull(),
+    imageUrl: varchar({ length: 500 }),
+    pointsGifted: int().notNull().default(0),
+    recipientsCount: int().notNull().default(0),
+    sentViaWhatsapp: boolean().notNull().default(false),
+    sentViaInApp: boolean().notNull().default(false),
+    createdAt: timestamp().defaultNow().notNull(),
+});

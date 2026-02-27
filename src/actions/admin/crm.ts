@@ -1,10 +1,11 @@
 "use server";
 
 import { db } from "@/db";
-import { clients, codes, redemptions, adminNotifications, appNotifications, clientGroups, clientGroupMembers } from "@/db/schema";
+import { clients, codes, redemptions, adminNotifications, appNotifications, clientGroups, clientGroupMembers, campaignsHistory } from "@/db/schema";
 import { eq, sql, inArray, isNull, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { triggerWebhook } from "@/lib/webhook";
+import { requireAdminSession } from "@/lib/auth/require-admin";
 
 /**
  * Obtiene todos los clientes con métricas agregadas (visitas totales, última visita, canjes).
@@ -140,12 +141,31 @@ export async function processCrmCampaign(
             }
         }
 
+        // 3. Registrar en Historial de Campañas
+        await tx.insert(campaignsHistory).values({
+            title: data.title as string,
+            body: data.body as string,
+            imageUrl: data.imageUrl || null,
+            pointsGifted: data.pointsToGift || 0,
+            recipientsCount: clientsList.length,
+            sentViaWhatsapp: data.sendMessage,
+            sentViaInApp: true, // Si había título y body, se intentó por in-app
+        });
+
         // Refrescar vistas pertinentes
         revalidatePath("/admin/clients");
         revalidatePath("/admin/campaigns");
 
         return { success: true };
     });
+}
+
+/**
+ * Obtiene el historial de campañas eviadas.
+ */
+export async function getCampaignsHistory() {
+    await requireAdminSession();
+    return await db.select().from(campaignsHistory).orderBy(sql`${campaignsHistory.createdAt} DESC`);
 }
 
 /**

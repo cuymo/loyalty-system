@@ -568,7 +568,7 @@ export function ClientsClient({ initialClients, initialPendingRedemptions }: Cli
                             <div className="grid grid-cols-3 gap-3">
                                 <div className="bg-muted rounded-lg p-3 justify-center flex flex-col items-center">
                                     <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 text-center">Registro</span>
-                                    <span className="text-sm font-semibold">{selectedClient.createdAt ? new Date(selectedClient.createdAt).toLocaleDateString("es-EC", { month: 'short', year: 'numeric' }) : "N/A"}</span>
+                                    <span className="text-xs font-semibold text-center">{selectedClient.createdAt ? new Date(selectedClient.createdAt).toLocaleString("es-EC", { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "N/A"}</span>
                                 </div>
                                 <div className="bg-muted rounded-lg p-3 justify-center flex flex-col items-center">
                                     <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 text-center">Cumpleaños</span>
@@ -584,7 +584,7 @@ export function ClientsClient({ initialClients, initialPendingRedemptions }: Cli
                                 </div>
                                 <div className="bg-muted rounded-lg p-3 justify-center flex flex-col items-center">
                                     <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 text-center">Últ. Acceso</span>
-                                    <span className="text-sm font-semibold">{selectedClient.lastLoginAt ? new Date(selectedClient.lastLoginAt).toLocaleDateString("es-EC", { month: 'short', day: 'numeric', year: 'numeric' }) : "N/A"}</span>
+                                    <span className="text-xs font-semibold text-center">{selectedClient.lastLoginAt ? new Date(selectedClient.lastLoginAt).toLocaleString("es-EC", { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "N/A"}</span>
                                 </div>
                                 <div className="bg-muted rounded-lg p-3 justify-center flex flex-col items-center">
                                     <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 text-center">Códigos Canjeados</span>

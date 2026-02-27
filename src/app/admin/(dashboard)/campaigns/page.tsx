@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getCrmClients, getClientGroups, getClientGroupMembers } from "@/actions/admin/crm";
+import { getCrmClients, getClientGroups, getClientGroupMembers, getCampaignsHistory } from "@/actions/admin/crm";
 import { CampaignsClient } from "./campaigns-client";
 
 export const dynamic = 'force-dynamic';
@@ -14,6 +14,7 @@ export default async function CampaignsPage() {
     const clientsData = await getCrmClients();
     const groups = await getClientGroups();
     const groupMemberships = await getClientGroupMembers();
+    const historyData = await getCampaignsHistory();
 
     return (
         <div className="p-4 md:p-8 space-y-6 flex flex-col h-[calc(100vh-3.5rem)]">
@@ -25,7 +26,7 @@ export default async function CampaignsPage() {
                     </p>
                 </div>
             </div>
-            <CampaignsClient initialClients={clientsData} initialGroups={groups} initialMemberships={groupMemberships} />
+            <CampaignsClient initialClients={clientsData} initialGroups={groups} initialMemberships={groupMemberships} initialHistory={historyData} />
         </div>
     );
 }
