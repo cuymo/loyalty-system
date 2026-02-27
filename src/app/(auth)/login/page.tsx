@@ -9,14 +9,14 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { requestOtp, verifyOtp, getPublicSettings } from "@/actions/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import Link from "next/link";
 
-export default function ClientLoginPage() {
+function ClientLoginContent() {
     const router = useRouter();
     const [step, setStep] = useState<"phone" | "confirm" | "otp">("phone");
     const [phone, setPhone] = useState("");
@@ -330,5 +330,13 @@ export default function ClientLoginPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function ClientLoginPage() {
+    return (
+        <Suspense fallback={<div className="h-[100dvh] flex items-center justify-center bg-background"><p className="text-muted-foreground animate-pulse">Cargando...</p></div>}>
+            <ClientLoginContent />
+        </Suspense>
     );
 }
