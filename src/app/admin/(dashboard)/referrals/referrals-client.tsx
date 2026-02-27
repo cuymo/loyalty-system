@@ -10,6 +10,19 @@ import { useState, useMemo } from "react";
 import { updateReferralSettings } from "@/actions/admin/referrals";
 import { useRouter } from "next/navigation";
 import { Save, AlertTriangle, ShieldCheck, Gem, Users, Plus, Trash } from "lucide-react";
+import { useModalStore } from "@/lib/modal-store";
+
+const formatEcuadorDate = (date: Date) => {
+    return date.toLocaleString('es-EC', {
+        timeZone: 'America/Guayaquil',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    }).replace('.', '').replace('.', '');
+};
 import { toast } from "@/lib/toast";
 import type { Setting } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -230,10 +243,7 @@ export function ReferralsClient({ initialSettings, history }: ReferralsClientPro
                                     {history.map((h) => (
                                         <TableRow key={h.id}>
                                             <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                                                {new Date(h.createdAt).toLocaleString('es-EC', {
-                                                    day: '2-digit', month: '2-digit', year: 'numeric',
-                                                    hour: '2-digit', minute: '2-digit'
-                                                })}
+                                                {formatEcuadorDate(new Date(h.createdAt))}
                                             </TableCell>
                                             <TableCell className="font-medium text-foreground">{h.referrerName}</TableCell>
                                             <TableCell className="font-medium text-primary">{h.referredName}</TableCell>

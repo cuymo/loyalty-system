@@ -7,14 +7,64 @@
  * Descripcion: Tabla simplificada (usuario+puntos), click abre modal con info completa e historial
  */
 
-"use client";
-
 import { useState, useMemo, useEffect } from "react";
 import { deleteClient, searchRedemptionTicket, getClientMovements, approveRedemption, rejectRedemption, blockClient, unblockClient } from "@/actions/admin";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useModalStore } from "@/lib/modal-store";
-import { Users, Trash2, MessageCircle, Search, ShieldCheck, Check, X, Gift, Download, Ban, Unlock } from "lucide-react";
+import { Users, Trash2, MessageCircle, Search, ShieldCheck, Check, X, Gift, Download, Ban, Unlock, Crown, Star, Sparkles, Trophy } from "lucide-react";
 import { toast } from "@/lib/toast";
+
+const getTierStyle = (lifetimePoints: number) => {
+    // Definimos los thresholds
+    const thresholds = { none: 0, bronze: 50, silver: 200, gold: 500, vip: 1000 };
+
+    if (lifetimePoints >= thresholds.vip) {
+        return {
+            name: "Ultimate VIP",
+            badge: "bg-red-500/20 text-red-600 dark:text-red-500 border-red-500/40",
+            icon: <Sparkles size={14} className="text-red-600 dark:text-red-500" />,
+        };
+    }
+    if (lifetimePoints >= thresholds.gold) {
+        return {
+            name: "Oro",
+            badge: "bg-yellow-400/20 text-amber-500 dark:text-yellow-400 border-yellow-400/40",
+            icon: <Star size={14} className="text-amber-500 dark:text-yellow-400" />,
+        };
+    }
+    if (lifetimePoints >= thresholds.silver) {
+        return {
+            name: "Plata",
+            badge: "bg-blue-400/20 text-blue-500 dark:text-blue-400 border-blue-400/30",
+            icon: <Trophy size={14} className="text-blue-500 dark:text-blue-400" />,
+        };
+    }
+    if (lifetimePoints >= thresholds.bronze) {
+        return {
+            name: "Bronce",
+            badge: "bg-[#CD7F32]/20 text-[#CD7F32] border-[#CD7F32]/30",
+            icon: <Trophy size={14} className="text-[#CD7F32]" />,
+        };
+    }
+
+    return {
+        name: "Ninguno",
+        badge: "bg-primary/10 text-primary border-primary/20",
+        icon: <Trophy size={14} className="text-primary" />,
+    };
+};
+
+const formatEcuadorDate = (date: Date) => {
+    return date.toLocaleString('es-EC', {
+        timeZone: 'America/Guayaquil',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    }).replace('.', '').replace('.', ''); // Fix a.m./p.m. punctuation if needed or keep clean
+};
 import type { Client, Redemption } from "@/types";
 
 import { Button } from "@/components/ui/button";
@@ -178,7 +228,7 @@ export function ClientsClient({ initialClients, initialPendingRedemptions }: Cli
             c.referralCount || 0,
             c.createdAt ? new Date(c.createdAt).toLocaleDateString("es-EC") : "N/A",
             c.loginCount || 0,
-            c.lastLoginAt ? new Date(c.lastLoginAt).toLocaleString("es-EC") : "N/A",
+            c.lastLoginAt ? formatEcuadorDate(new Date(c.lastLoginAt)) : "N/A",
             c.codesRedeemed || 0,
             c.totalRedemptions || 0
         ]);
@@ -562,9 +612,20 @@ export function ClientsClient({ initialClients, initialPendingRedemptions }: Cli
                                         {selectedClient.phone}
                                     </p>
                                 </div>
-                                <Badge variant="secondary" className="text-base shrink-0">
-                                    {selectedClient.points} pts
-                                </Badge>
+                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                    <Badge variant="secondary" className="text-base shrink-0">
+                                        {selectedClient.points} pts
+                                    </Badge>
+                                    {(() => {
+                                        const style = getTierStyle(selectedClient.lifetimePoints || 0);
+                                        return (
+                                            <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border shadow-sm ${style.badge}`}>
+                                                {style.icon}
+                                                <span className="text-[10px] font-black uppercase tracking-widest">{style.name}</span>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
                             </div>
 
                             {/* Quick Actions */}
@@ -623,7 +684,7 @@ export function ClientsClient({ initialClients, initialPendingRedemptions }: Cli
                             <div className="grid grid-cols-3 gap-3">
                                 <div className="bg-muted rounded-lg p-3 justify-center flex flex-col items-center">
                                     <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 text-center">Registro</span>
-                                    <span className="text-xs font-semibold text-center">{selectedClient.createdAt ? new Date(selectedClient.createdAt).toLocaleString("es-EC", { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "N/A"}</span>
+                                    <span className="text-xs font-semibold text-center">{selectedClient.createdAt ? formatEcuadorDate(new Date(selectedClient.createdAt)) : "N/A"}</span>
                                 </div>
                                 <div className="bg-muted rounded-lg p-3 justify-center flex flex-col items-center">
                                     <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 text-center">Cumpleaños</span>
@@ -639,7 +700,7 @@ export function ClientsClient({ initialClients, initialPendingRedemptions }: Cli
                                 </div>
                                 <div className="bg-muted rounded-lg p-3 justify-center flex flex-col items-center">
                                     <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 text-center">Últ. Acceso</span>
-                                    <span className="text-xs font-semibold text-center">{selectedClient.lastLoginAt ? new Date(selectedClient.lastLoginAt).toLocaleString("es-EC", { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "N/A"}</span>
+                                    <span className="text-xs font-semibold text-center">{selectedClient.lastLoginAt ? formatEcuadorDate(new Date(selectedClient.lastLoginAt)) : "N/A"}</span>
                                 </div>
                                 <div className="bg-muted rounded-lg p-3 justify-center flex flex-col items-center">
                                     <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 text-center">Códigos Canjeados</span>
@@ -683,7 +744,7 @@ export function ClientsClient({ initialClients, initialPendingRedemptions }: Cli
                                                         {mov.details}
                                                     </p>
                                                     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-1">
-                                                        <span>{new Date(mov.date).toLocaleString("es-EC")}</span>
+                                                        <span>{formatEcuadorDate(new Date(mov.date))}</span>
                                                         {mov.type === "redemption" && mov.status && (
                                                             <Badge
                                                                 variant={

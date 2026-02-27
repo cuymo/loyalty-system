@@ -162,6 +162,12 @@ function ClientLoginContent() {
                 {/* Paso 1: Ingresar teléfono */}
                 {step === "phone" && (
                     <form onSubmit={handlePhoneSubmit} className="space-y-4">
+                        {error && (
+                            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl mb-4">
+                                <p className="text-destructive text-sm text-center font-medium">{error}</p>
+                            </div>
+                        )}
+
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-muted-foreground">
                                 Numero de Telefono
@@ -169,9 +175,12 @@ function ClientLoginContent() {
                             <input
                                 type="tel"
                                 value={phone}
-                                onChange={(e) =>
-                                    setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
-                                }
+                                onChange={(e) => {
+                                    setPhone(e.target.value.replace(/\D/g, "").slice(0, 10));
+                                    if (error && error.includes("bloqueada")) {
+                                        setError("");
+                                    }
+                                }}
                                 placeholder="0998765432"
                                 className="w-full px-4 py-3.5 bg-card border border-border rounded-xl text-foreground text-lg tracking-wider placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all text-center font-mono"
                             />
@@ -179,10 +188,6 @@ function ClientLoginContent() {
                                 Recibirás un codigo de verificacion via WhatsApp
                             </p>
                         </div>
-
-                        {error && (
-                            <p className="text-destructive text-sm text-center">{error}</p>
-                        )}
 
                         <Button
                             type="submit"

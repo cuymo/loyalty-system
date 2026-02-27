@@ -34,6 +34,18 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useModalStore } from "@/lib/modal-store";
+
+const formatEcuadorDate = (date: Date) => {
+    return date.toLocaleString('es-EC', {
+        timeZone: 'America/Guayaquil',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    }).replace('.', '').replace('.', '');
+};
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
     Dialog,
@@ -427,10 +439,12 @@ export function CampaignsClient({ initialClients, initialGroups, initialMembersh
                                     initialHistory.map((campaign) => (
                                         <TableRow key={campaign.id} className="cursor-default hover:bg-muted/50">
                                             <TableCell className="font-medium">
-                                                {new Date(campaign.createdAt).toLocaleString("es-EC", {
-                                                    day: 'numeric', month: 'short', year: 'numeric',
-                                                    hour: '2-digit', minute: '2-digit'
-                                                })}
+                                                <div className="text-sm font-medium">
+                                                    {formatEcuadorDate(new Date(campaign.createdAt))}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                                    {campaign.title}
+                                                </div>
                                             </TableCell>
                                             <TableCell>
                                                 <div className="font-semibold">{campaign.title}</div>
@@ -624,7 +638,7 @@ function CampaignFormContent({ selectedClients, onClose }: { selectedClients: Cr
                         <Checkbox checked={enableMessage} onCheckedChange={(checked) => setEnableMessage(checked === true)} disabled={hasAnyNoMarketing} />
                     </div>
                     {hasAnyNoMarketing && (
-                        <p className="text-xs text-warning font-medium mt-2">
+                        <p className="text-[12px] text-destructive font-bold mt-1">
                             Deshabilitado: Al menos un cliente destino no permite envíos de marketing de WhatsApp.
                         </p>
                     )}
