@@ -483,7 +483,7 @@ function CampaignsModalController() {
 
     return (
         <Dialog open={true} onOpenChange={(open) => !open && closeModal()}>
-            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full rounded-2xl">
+            <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Asistente de Campaña ({selectedIds.length} clientes)</DialogTitle>
                 </DialogHeader>
@@ -548,28 +548,31 @@ function CampaignFormContent({ selectedClients, onClose }: { selectedClients: Cr
                 <Input value={msgImageUrl} onChange={e => setMsgImageUrl(e.target.value)} placeholder="https://..." />
             </div>
             <div className="space-y-3 pt-2">
-                <div className={`flex flex-col p-3 bg-muted/50 rounded-lg border ${hasAnyNoMarketing ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                <div className={`p-3 bg-muted/50 rounded-lg border ${hasAnyNoMarketing ? 'opacity-60 cursor-not-allowed' : ''}`}>
                     <div className="flex items-center justify-between">
                         <span className="text-sm flex items-center gap-2 font-semibold"><MessageCircle size={16} className="text-[#25D366]" />Enviar por WhatsApp</span>
                         <Checkbox checked={enableMessage} onCheckedChange={(checked) => setEnableMessage(checked === true)} disabled={hasAnyNoMarketing} />
                     </div>
                     {hasAnyNoMarketing && (
-                        <p className="text-xs text-warning font-medium mt-1">
+                        <p className="text-xs text-warning font-medium mt-2">
                             Deshabilitado: Al menos un cliente destino no permite envíos de marketing de WhatsApp.
                         </p>
                     )}
                 </div>
-                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
-                    <span className="text-sm flex items-center gap-2 font-semibold"><Gift size={16} className="text-primary" />Acreditar Puntos Acoplados:
-                        <Input type="number" className="w-20 h-8 ml-2" value={giftPoints || ''} onChange={(e) => setGiftPoints(Number(e.target.value))} disabled={!enablePoints} placeholder="0" />
-                    </span>
-                    <Checkbox checked={enablePoints} onCheckedChange={(checked) => setEnablePoints(checked === true)} />
+                <div className="p-3 bg-muted/50 rounded-lg border space-y-3">
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm flex items-center gap-2 font-semibold"><Gift size={16} className="text-primary" />Acreditar Puntos</span>
+                        <Checkbox checked={enablePoints} onCheckedChange={(checked) => setEnablePoints(checked === true)} />
+                    </div>
+                    {enablePoints && (
+                        <Input type="number" value={giftPoints || ''} onChange={(e) => setGiftPoints(Number(e.target.value))} placeholder="Cantidad de puntos" />
+                    )}
                 </div>
             </div>
-            <div className="flex justify-end gap-2 pt-4">
+            <DialogFooter>
                 <Button variant="outline" onClick={onClose} disabled={isProcessing}>Cancelar</Button>
                 <Button onClick={handleLaunchCampaign} disabled={isProcessing}>Enviar Ahora</Button>
-            </div>
+            </DialogFooter>
         </div>
     );
 }
