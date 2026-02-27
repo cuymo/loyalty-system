@@ -26,7 +26,9 @@ export async function getCrmClients() {
             lifetimePoints: clients.lifetimePoints,
             referralCount: clients.referralCount,
             birthDate: clients.birthDate,
-            totalVisits: sql<number>`(SELECT COUNT(*) FROM ${codes} WHERE ${codes.usedByClientId} = clients.id)`.mapWith(Number),
+            lastLoginAt: clients.lastLoginAt,
+            loginCount: clients.loginCount,
+            codesRedeemed: sql<number>`(SELECT COUNT(*) FROM ${codes} WHERE ${codes.usedByClientId} = clients.id)`.mapWith(Number),
             lastVisit: sql<string | null>`(SELECT MAX(${codes.usedAt}) FROM ${codes} WHERE ${codes.usedByClientId} = clients.id)`,
             totalRedemptions: sql<number>`(SELECT COUNT(*) FROM ${redemptions} WHERE ${redemptions.clientId} = clients.id)`.mapWith(Number),
         })

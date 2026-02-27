@@ -49,6 +49,8 @@ export const clients = mysqlTable("clients", {
     wantsTransactional: boolean("wants_transactional").notNull().default(true),
     wantsInAppNotifs: boolean("wants_in_app_notifs").notNull().default(true),
     deletedAt: timestamp(),
+    lastLoginAt: timestamp(),
+    loginCount: int().notNull().default(0),
     createdAt: timestamp().defaultNow().notNull(),
 });
 

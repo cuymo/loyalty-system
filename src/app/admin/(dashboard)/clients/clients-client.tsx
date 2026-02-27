@@ -161,7 +161,7 @@ export function ClientsClient({ initialClients, initialPendingRedemptions }: Cli
             return;
         }
 
-        const headers = ["ID", "Usuario", "Teléfono", "Puntos Actuales", "Puntos Historicos", "Fecha de Nacimiento", "Referido Por", "Accesos Referidos", "Fecha Creacion"];
+        const headers = ["ID", "Usuario", "Teléfono", "Puntos Actuales", "Puntos Historicos", "Fecha de Nacimiento", "Referido Por", "Accesos Referidos", "Fecha Creacion", "Inicios Sesión", "Último Acceso", "Códigos Canjeados", "Canjes Premios"];
 
         const rows = initialClients.map(c => [
             c.id,
@@ -172,7 +172,11 @@ export function ClientsClient({ initialClients, initialPendingRedemptions }: Cli
             c.birthDate || "N/A",
             c.referredBy || "N/A",
             c.referralCount || 0,
-            c.createdAt ? new Date(c.createdAt).toLocaleDateString("es-EC") : "N/A"
+            c.createdAt ? new Date(c.createdAt).toLocaleDateString("es-EC") : "N/A",
+            c.loginCount || 0,
+            c.lastLoginAt ? new Date(c.lastLoginAt).toLocaleString("es-EC") : "N/A",
+            c.codesRedeemed || 0,
+            c.totalRedemptions || 0
         ]);
 
         const csvContent = "data:text/csv;charset=utf-8,"
@@ -575,15 +579,19 @@ export function ClientsClient({ initialClients, initialPendingRedemptions }: Cli
                                     <span className="text-sm font-semibold text-primary">{selectedClient.referralCount || 0}</span>
                                 </div>
                                 <div className="bg-muted rounded-lg p-3 justify-center flex flex-col items-center">
-                                    <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 text-center">Puntos Hist.</span>
-                                    <span className="text-sm font-semibold">{selectedClient.lifetimePoints || 0}</span>
+                                    <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 text-center">Inicios Sesión</span>
+                                    <span className="text-sm font-semibold">{selectedClient.loginCount || 0}</span>
                                 </div>
                                 <div className="bg-muted rounded-lg p-3 justify-center flex flex-col items-center">
-                                    <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 text-center">Visitas</span>
-                                    <span className="text-sm font-semibold">{selectedClient.totalVisits || 0}</span>
+                                    <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 text-center">Últ. Acceso</span>
+                                    <span className="text-sm font-semibold">{selectedClient.lastLoginAt ? new Date(selectedClient.lastLoginAt).toLocaleDateString("es-EC", { month: 'short', day: 'numeric', year: 'numeric' }) : "N/A"}</span>
                                 </div>
                                 <div className="bg-muted rounded-lg p-3 justify-center flex flex-col items-center">
-                                    <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 text-center">Canjes</span>
+                                    <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 text-center">Códigos Canjeados</span>
+                                    <span className="text-sm font-semibold">{selectedClient.codesRedeemed || 0}</span>
+                                </div>
+                                <div className="bg-muted rounded-lg p-3 justify-center flex flex-col items-center">
+                                    <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 text-center">Premios Pedidos</span>
                                     <span className="text-sm font-semibold">{selectedClient.totalRedemptions || 0}</span>
                                 </div>
                             </div>

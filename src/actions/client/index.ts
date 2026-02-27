@@ -238,7 +238,14 @@ export async function verifyOtp(phone: string, otp: string) {
             return { success: true, isNew: true, phone };
         }
 
-        // Login normal: crear sesion
+        // Login normal: actualizar métricas y crear sesion
+        await db.update(clients)
+            .set({
+                lastLoginAt: new Date(),
+                loginCount: sql`${clients.loginCount} + 1`
+            })
+            .where(eq(clients.id, existingClient.id));
+
         await createClientSession({
             clientId: existingClient.id,
             phone: existingClient.phone,
@@ -383,9 +390,10 @@ export async function registerClient(data: {
             birthDate: data.birthDate,
             referredBy: null, // assigned by processReferral
             points: 0,
-            lifetimePoints: 0,
             wantsMarketing: data.wantsMarketing ?? true,
             wantsTransactional: data.wantsTransactional ?? true,
+            lastLoginAt: new Date(),
+            loginCount: 1,
         })
         .$returningId();
 

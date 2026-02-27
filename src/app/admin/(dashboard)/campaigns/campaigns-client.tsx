@@ -107,11 +107,11 @@ export function CampaignsClient({ initialClients, initialGroups, initialMembersh
 
         switch (activeFilter) {
             case 'vips':
-                result = result.filter(c => c.totalVisits >= 3);
+                result = result.filter(c => c.codesRedeemed >= 3);
                 break;
             case 'absent':
                 result = result.filter(c => {
-                    const lastDate = c.lastVisit ? new Date(c.lastVisit) : new Date(c.createdAt);
+                    const lastDate = c.lastLoginAt ? new Date(c.lastLoginAt) : new Date(c.createdAt);
                     return (now.getTime() - lastDate.getTime()) > THIRTY_DAYS;
                 });
                 break;
@@ -283,10 +283,10 @@ export function CampaignsClient({ initialClients, initialGroups, initialMembersh
                                     <div className="flex items-center gap-2"><Users size={14} />Todos</div>
                                 </SelectItem>
                                 <SelectItem value="vips">
-                                    <div className="flex items-center gap-2"><Target size={14} />VIPs</div>
+                                    <div className="flex items-center gap-2"><Target size={14} />VIPs (3+ canjes)</div>
                                 </SelectItem>
                                 <SelectItem value="absent">
-                                    <div className="flex items-center gap-2"><Search size={14} />Ausentes</div>
+                                    <div className="flex items-center gap-2"><Search size={14} />Ausentes (+30d)</div>
                                 </SelectItem>
                                 <SelectItem value="hoarders">
                                     <div className="flex items-center gap-2"><Gift size={14} />Acumuladores</div>
@@ -472,7 +472,7 @@ export function CampaignsClient({ initialClients, initialGroups, initialMembersh
                 isLoadingHistory={isLoadingHistory}
                 clientMovements={clientMovements}
             />
-        </div>
+        </div >
     );
 }
 
