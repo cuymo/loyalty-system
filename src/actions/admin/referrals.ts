@@ -15,6 +15,7 @@ import { revalidatePath } from "next/cache";
 
 const REFERRAL_SETTINGS_KEYS = [
     "ref_enabled",
+    "ref_milestones",
     "ref_monthly_limit",
     "ref_lifetime_limit",
     "ref_cooldown_hours",
@@ -28,6 +29,7 @@ const REFERRAL_SETTINGS_KEYS = [
 
 const DEFAULT_REFERRAL_SETTINGS: Record<string, string> = {
     "ref_enabled": "true",
+    "ref_milestones": '[{"id":1,"amount":3,"reward":50}]',
     "ref_monthly_limit": "3",
     "ref_lifetime_limit": "20",
     "ref_cooldown_hours": "0",
@@ -63,9 +65,9 @@ export async function updateReferralSettings(updates: { key: string; value: stri
     await requireAdminSession();
 
     for (const update of updates) {
-        await db.update(settings)
-            .set({ value: update.value, updatedAt: new Date() })
-            .where(eq(settings.key, update.key));
+        await db.insert(settings)
+            .values({ key: update.key, value: update.value })
+            .onDuplicateKeyUpdate({ set: { value: update.value, updatedAt: new Date() } });
     }
 
     await db.insert(adminNotifications).values({
