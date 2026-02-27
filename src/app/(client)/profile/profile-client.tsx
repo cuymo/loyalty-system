@@ -225,7 +225,7 @@ export function ProfileClient({ client, avatars, referralProgress }: ProfileClie
                                         <p className="text-[11px] text-muted-foreground leading-tight">
                                             {referralProgress.allCompleted
                                                 ? "¡Has completado todas las metas! 🎉"
-                                                : `Invita ${referralProgress.limit - referralProgress.usedThisMonth} amigo(s) más para ganar ${referralProgress.currentReward} pts.`
+                                                : <span>Invita <b className="text-foreground">{referralProgress.limit - referralProgress.usedThisMonth}</b> amigo(s) más para ganar <b className="text-primary">{referralProgress.currentReward} pts</b>.</span>
                                             }
                                         </p>
                                         {!referralProgress.allCompleted && (

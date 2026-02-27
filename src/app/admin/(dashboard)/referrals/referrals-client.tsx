@@ -203,7 +203,7 @@ export function ReferralsClient({ initialSettings, history }: ReferralsClientPro
                         <h3 className="text-lg font-bold flex items-center gap-2"><Users size={20} className="text-primary" /> Mensaje de Invitación</h3>
                         <p className="text-sm text-muted-foreground mt-1">Plantilla que se precargará en WhatsApp cuando tu cliente pulse "Compartir".</p>
                     </div>
-                    <div className="p-4 md:p-6">
+                    <div className="p-4 md:p-6 space-y-4">
                         <textarea
                             rows={3}
                             value={settings.ref_share_message || ""}
@@ -212,13 +212,15 @@ export function ReferralsClient({ initialSettings, history }: ReferralsClientPro
                             className="w-full px-4 py-3 bg-background border border-border/50 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
                         />
                         <p className="text-xs text-muted-foreground mt-2 inline-flex items-center gap-1">La palabra <b className="font-mono text-[10px] bg-muted px-1 py-0.5 rounded">{`{{link}}`}</b> será reemplazada automáticamente por el enlace único del cliente.</p>
+
+                        <div className="pt-2">
+                            <Button onClick={handleSaveMessage} disabled={isLoading} className="w-full sm:w-auto mt-2">
+                                <Save className="w-4 h-4 mr-2" />
+                                {isLoading ? "Guardando..." : "Guardar Mensaje"}
+                            </Button>
+                        </div>
                     </div>
                 </div>
-
-                <Button onClick={handleSaveMessage} disabled={isLoading} className="w-full sm:w-auto">
-                    <Save className="w-4 h-4 mr-2" />
-                    {isLoading ? "Guardando..." : "Guardar Mensaje"}
-                </Button>
             </TabsContent>
 
             {/* ---- TAB: Historial ---- */}
