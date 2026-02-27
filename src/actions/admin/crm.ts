@@ -97,8 +97,8 @@ export async function processCrmCampaign(
         }
 
         // 2. Enviar Mensaje (In-App y Webhook)
-        if (data.sendMessage && data.title && data.body) {
-            // A) Notificaciones In-App
+        if (data.title && data.body) {
+            // A) Notificaciones In-App Siempre llegan a la App si hay titulo y body
             const inAppMessageNotifs: { clientId: number; title: string; body: string; type: string; isRead: boolean }[] = clientsList
                 .filter(c => c.wantsInAppNotifs)
                 .map(c => ({
@@ -113,26 +113,28 @@ export async function processCrmCampaign(
                 await tx.insert(appNotifications).values(inAppMessageNotifs);
             }
 
-            // B) Webhook para WhatsApp
-            const whatsappTargets = clientsList
-                .filter(c => c.wantsMarketing)
-                .map(c => ({
-                    id: c.id,
-                    phone: c.phone,
-                    username: c.username,
-                    points: c.points + (data.pointsToGift || 0) // Puntos calculados post-regalo
-                }));
+            // B) Webhook para WhatsApp (Solo si data.sendMessage es true)
+            if (data.sendMessage) {
+                const whatsappTargets = clientsList
+                    .filter(c => c.wantsMarketing)
+                    .map(c => ({
+                        id: c.id,
+                        phone: c.phone,
+                        username: c.username,
+                        points: c.points + (data.pointsToGift || 0) // Puntos calculados post-regalo
+                    }));
 
-            if (whatsappTargets.length > 0) {
-                // NOTA: triggerWebhook hace un throw si falla severamente la llamada (ej fetch reject)
-                // lo cual abortará la transacción `tx` automáticamente y revocará la suma de puntos.
-                await triggerWebhook("admin.notificacion_custom_whatsapp", {
-                    title: data.title,
-                    body: data.body,
-                    imageUrl: data.imageUrl || null,
-                    puntosRegalados: data.pointsToGift || 0, // Nuevo parámetro integrado para n8n
-                    targets: whatsappTargets
-                });
+                if (whatsappTargets.length > 0) {
+                    // NOTA: triggerWebhook hace un throw si falla severamente la llamada (ej fetch reject)
+                    // lo cual abortará la transacción `tx` automáticamente y revocará la suma de puntos.
+                    await triggerWebhook("admin.notificacion_custom_whatsapp", {
+                        title: data.title,
+                        body: data.body,
+                        imageUrl: data.imageUrl || null,
+                        puntosRegalados: data.pointsToGift || 0, // Nuevo parámetro integrado para n8n
+                        targets: whatsappTargets
+                    });
+                }
             }
         }
 

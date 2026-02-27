@@ -53,9 +53,9 @@ export function ReferralsClient({ initialSettings, history }: ReferralsClientPro
     return (
         <Tabs defaultValue="rules" className="space-y-6">
             <TabsList className="bg-muted p-1">
-                <TabsTrigger value="rules" className="font-medium gap-2"><ShieldCheck size={16} /> Reglas y Límites</TabsTrigger>
-                <TabsTrigger value="bonuses" className="font-medium gap-2"><Gem size={16} /> Bonos Dinámicos</TabsTrigger>
-                <TabsTrigger value="messages" className="font-medium gap-2"><Users size={16} /> Mensajes / Comparte</TabsTrigger>
+                <TabsTrigger value="rules" className="font-medium gap-2"><ShieldCheck size={16} /> Metas y Progreso</TabsTrigger>
+                <TabsTrigger value="bonuses" className="font-medium gap-2"><Gem size={16} /> Recompensas</TabsTrigger>
+                <TabsTrigger value="messages" className="font-medium gap-2"><Users size={16} /> Mensaje</TabsTrigger>
                 <TabsTrigger value="audit" className="font-medium gap-2"><AlertTriangle size={16} /> Auditoría</TabsTrigger>
             </TabsList>
 
@@ -74,25 +74,25 @@ export function ReferralsClient({ initialSettings, history }: ReferralsClientPro
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <label className="text-sm font-semibold text-foreground">Límite Mensual Estricto</label>
+                            <label className="text-sm font-semibold text-foreground">Meta Base (Nro. de Referidos)</label>
                             <input
                                 type="number"
-                                value={settings.ref_monthly_limit}
-                                onChange={e => setSettings({ ...settings, ref_monthly_limit: e.target.value })}
+                                value={settings.ref_goal_base}
+                                onChange={e => setSettings({ ...settings, ref_goal_base: e.target.value })}
                                 className="w-full px-4 py-2.5 bg-accent/30 focus:bg-background border border-border/50 rounded-lg text-foreground transition-all"
                             />
-                            <p className="text-xs text-muted-foreground">Máximo de veces que un usuario puede dar/recibir referidos al mes. Evita granjas de cuentas.</p>
+                            <p className="text-xs text-muted-foreground">Número de invitaciones que un cliente debe completar su 1era vez para ganar el premio grande.</p>
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-sm font-semibold text-foreground">Límite Vitalicio</label>
+                            <label className="text-sm font-semibold text-foreground">Aumento Gradual de Meta</label>
                             <input
                                 type="number"
-                                value={settings.ref_lifetime_limit}
-                                onChange={e => setSettings({ ...settings, ref_lifetime_limit: e.target.value })}
+                                value={settings.ref_goal_increment}
+                                onChange={e => setSettings({ ...settings, ref_goal_increment: e.target.value })}
                                 className="w-full px-4 py-2.5 bg-accent/30 focus:bg-background border border-border/50 rounded-lg text-foreground transition-all"
                             />
-                            <p className="text-xs text-muted-foreground">Tope absoluto de referidos que puede capitalizar en la vida de su cuenta.</p>
+                            <p className="text-xs text-muted-foreground">Después de ganar una meta, ¿cuántos referidos MÁS se sumarán al próximo reto?</p>
                         </div>
                     </div>
                 </div>
@@ -105,61 +105,30 @@ export function ReferralsClient({ initialSettings, history }: ReferralsClientPro
 
             <TabsContent value="bonuses" className="mt-4 space-y-6 text-foreground animate-in fade-in">
                 <div className="bg-card border border-border shadow-sm rounded-xl p-6 space-y-6">
-                    <h3 className="text-lg font-bold text-foreground mb-4">Bonos Escalonados por Nivel (Tier)</h3>
-                    <p className="text-sm text-muted-foreground mb-6">Incentiva a los clientes VIP premiándolos más cuando invitan a un amigo, en comparación con usuarios Bronce.</p>
+                    <h3 className="text-lg font-bold text-foreground mb-4">Recompensas del Programa</h3>
+                    <p className="text-sm text-muted-foreground mb-6">Configura cuánto gana cada parte de la invitación.</p>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="p-4 border border-border/40 rounded-lg space-y-1 bg-accent/5">
-                            <label className="text-xs font-black uppercase tracking-wider text-[#CD7F32]">Recompensa Bronce</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div className="space-y-2 p-4 border border-border/40 rounded-lg bg-accent/5">
+                            <label className="text-sm font-bold text-foreground">Premio Meta Alcanzada (Para el que Comparte)</label>
                             <input
                                 type="number"
-                                value={settings.ref_points_referrer_bronze}
-                                onChange={e => setSettings({ ...settings, ref_points_referrer_bronze: e.target.value })}
-                                className="w-full px-3 py-2 bg-background border border-border/50 rounded shadow-inner"
+                                value={settings.ref_points_referrer}
+                                onChange={e => setSettings({ ...settings, ref_points_referrer: e.target.value })}
+                                className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-lg"
                             />
+                            <p className="text-xs text-muted-foreground/80 font-medium mt-1">Puntos que gana CADA VEZ que llena el progreso de su meta actual.</p>
                         </div>
 
-                        <div className="p-4 border border-border/40 rounded-lg space-y-1 bg-accent/5">
-                            <label className="text-xs font-black uppercase tracking-wider text-blue-500">Recompensa Plata</label>
-                            <input
-                                type="number"
-                                value={settings.ref_points_referrer_silver}
-                                onChange={e => setSettings({ ...settings, ref_points_referrer_silver: e.target.value })}
-                                className="w-full px-3 py-2 bg-background border border-border/50 rounded shadow-inner"
-                            />
-                        </div>
-
-                        <div className="p-4 border border-border/40 rounded-lg space-y-1 bg-accent/5">
-                            <label className="text-xs font-black uppercase tracking-wider text-amber-500">Recompensa Oro</label>
-                            <input
-                                type="number"
-                                value={settings.ref_points_referrer_gold}
-                                onChange={e => setSettings({ ...settings, ref_points_referrer_gold: e.target.value })}
-                                className="w-full px-3 py-2 bg-background border border-border/50 rounded shadow-inner"
-                            />
-                        </div>
-
-                        <div className="p-4 border border-border/40 rounded-lg space-y-1 bg-accent/5">
-                            <label className="text-xs font-black uppercase tracking-wider text-red-500">Recompensa VIP</label>
-                            <input
-                                type="number"
-                                value={settings.ref_points_referrer_vip}
-                                onChange={e => setSettings({ ...settings, ref_points_referrer_vip: e.target.value })}
-                                className="w-full px-3 py-2 bg-background border border-border/50 rounded shadow-inner"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="pt-6 border-t border-border/50 mt-6">
-                        <div className="space-y-2 p-4 bg-primary/5 rounded-lg border border-primary/20">
-                            <label className="text-sm font-bold text-primary">Bono Fijo de Ingreso (Para el Invitado)</label>
+                        <div className="space-y-2 p-4 border border-border/40 rounded-lg bg-accent/5">
+                            <label className="text-sm font-bold text-foreground">Bono Fijo de Ingreso (Para el Invitado)</label>
                             <input
                                 type="number"
                                 value={settings.ref_points_referred}
                                 onChange={e => setSettings({ ...settings, ref_points_referred: e.target.value })}
                                 className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-lg"
                             />
-                            <p className="text-xs text-muted-foreground/80 font-medium">Cuántos puntos gana el nuevo cliente al registrarse con cualquier código válido.</p>
+                            <p className="text-xs text-muted-foreground/80 font-medium mt-1">Cuántos puntos gana el nuevo cliente instantáneamente al registrarse.</p>
                         </div>
                     </div>
                 </div>

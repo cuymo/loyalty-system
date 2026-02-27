@@ -576,7 +576,9 @@ function CampaignsModalController() {
                     <DrawerHeader>
                         <DrawerTitle>Asistente de Campaña</DrawerTitle>
                     </DrawerHeader>
-                    <CampaignFormContent selectedIds={selectedIds} onClose={closeModal} />
+                    <div className="px-4 pb-8 overflow-y-auto max-h-[80vh]">
+                        <CampaignFormContent selectedIds={selectedIds} onClose={closeModal} />
+                    </div>
                 </DrawerContent>
             </Drawer>
         );

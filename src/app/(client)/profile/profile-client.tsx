@@ -12,7 +12,7 @@ import { updateClientProfile, logoutClient, deleteMyAccount, applyReferralCode }
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { LogOut, Save, MessageCircle, Trash2, AlertTriangle, FileText, Shield, Users, Copy, Check, Share2 } from "lucide-react";
+import { LogOut, Save, MessageCircle, Trash2, AlertTriangle, FileText, Shield, Users, Copy, Check, Share2, Lock } from "lucide-react";
 import type { Client } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +37,7 @@ interface ProfileClientProps {
     };
     avatars: string[];
     referralProgress: {
+        enabled: boolean;
         usedThisMonth: number;
         limit: number;
         shareMessage: string;
@@ -197,84 +198,97 @@ export function ProfileClient({ client, avatars, referralProgress }: ProfileClie
                 {/* Programa de Referidos */}
                 <div className="space-y-4 pt-2">
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest px-1">Programa de Referidos</label>
-                    <div className="bg-primary/5 border-2 border-primary/20 rounded-2xl p-5 space-y-4 shadow-sm">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-primary/10 text-primary rounded-xl shrink-0">
-                                    <Users size={20} />
+                    <div className="relative">
+                        {/* Overlay Locked State */}
+                        {!referralProgress.enabled && (
+                            <div className="absolute inset-0 z-20 bg-background/60 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center p-4 text-center border border-border overflow-hidden">
+                                <div className="p-3 bg-muted rounded-full mb-3 text-muted-foreground shadow-sm">
+                                    <Lock size={24} />
                                 </div>
-                                <div className="space-y-0.5 min-w-0">
-                                    <span className="text-sm font-bold text-foreground block truncate">
-                                        Tu Código: #{client.id.toString().padStart(6, '0')}
-                                    </span>
-                                    <p className="text-[11px] text-muted-foreground leading-tight">Gana puntos invitando amigos.</p>
-                                    <div className="mt-2 w-full bg-border rounded-full h-1.5 overflow-hidden">
-                                        <div className="bg-primary h-full transition-all" style={{ width: `${Math.min(100, (referralProgress.usedThisMonth / referralProgress.limit) * 100)}%` }} />
+                                <p className="text-sm font-bold text-foreground mb-1">Temporalmente Inhabilitado</p>
+                                <p className="text-[11px] text-muted-foreground max-w-[200px]">Te notificaremos apenas el programa vuelva a estar activo.</p>
+                            </div>
+                        )}
+
+                        <div className={`bg-primary/5 border-2 border-primary/20 rounded-2xl p-5 space-y-4 shadow-sm relative z-10 ${!referralProgress.enabled ? 'opacity-50 pointer-events-none select-none' : ''}`}>
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div className="flex items-center gap-3 w-full">
+                                    <div className="p-2 bg-primary/10 text-primary rounded-xl shrink-0">
+                                        <Users size={20} />
                                     </div>
-                                    <p className="text-[10px] text-muted-foreground mt-1 text-right w-full">Usos este mes: {referralProgress.usedThisMonth}/{referralProgress.limit}</p>
+                                    <div className="space-y-0.5 min-w-0 flex-1 pr-2">
+                                        <span className="text-sm font-bold text-foreground block truncate">
+                                            Tu Código: #{client.id.toString().padStart(6, '0')}
+                                        </span>
+                                        <p className="text-[11px] text-muted-foreground leading-tight">Completa la meta para ganar puntos.</p>
+                                        <div className="mt-2 w-full bg-border rounded-full h-1.5 overflow-hidden">
+                                            <div className="bg-primary h-full transition-all" style={{ width: `${Math.min(100, (referralProgress.usedThisMonth / referralProgress.limit) * 100)}%` }} />
+                                        </div>
+                                        <p className="text-[10px] text-muted-foreground mt-1 text-right w-full">Progreso a la meta: {referralProgress.usedThisMonth}/{referralProgress.limit}</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                    const paddedId = client.id.toString().padStart(6, '0');
-                                    const referLink = `${window.location.origin}/register?ref=${paddedId}`;
-                                    const rawMessage = referralProgress.shareMessage
-                                        .replace("{{link}}", referLink)
-                                        .replace("{{username}}", client.username);
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        const paddedId = client.id.toString().padStart(6, '0');
+                                        const referLink = `${window.location.origin}/register?ref=${paddedId}`;
+                                        const rawMessage = referralProgress.shareMessage
+                                            .replace("{{link}}", referLink)
+                                            .replace("{{username}}", client.username);
 
-                                    if (navigator.share) {
-                                        navigator.share({
-                                            title: 'Únete a Crew Zingy',
-                                            text: rawMessage,
-                                        }).catch(console.error);
-                                    } else {
-                                        navigator.clipboard.writeText(rawMessage);
-                                        const prevMsg = message;
-                                        setMessage("¡Mensaje y link copiados al portapapeles!");
-                                        setTimeout(() => setMessage(prevMsg), 2000);
-                                    }
-                                }}
-                                className="h-9 sm:h-8 rounded-lg px-4 sm:px-3 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10 transition-all font-bold w-full sm:w-auto shrink-0"
-                            >
-                                <Share2 size={14} />
-                                Compartir
-                            </Button>
+                                        if (navigator.share) {
+                                            navigator.share({
+                                                title: 'Únete a Crew Zingy',
+                                                text: rawMessage,
+                                            }).catch(console.error);
+                                        } else {
+                                            navigator.clipboard.writeText(rawMessage);
+                                            const prevMsg = message;
+                                            setMessage("¡Mensaje y link copiados al portapapeles!");
+                                            setTimeout(() => setMessage(prevMsg), 2000);
+                                        }
+                                    }}
+                                    className="h-9 sm:h-8 rounded-lg px-4 sm:px-3 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10 transition-all font-bold w-full sm:w-auto shrink-0"
+                                >
+                                    <Share2 size={14} />
+                                    Compartir
+                                </Button>
+                            </div>
+
+                            {/* Canjear código de amigo */}
+                            {!client.referredBy && (
+                                <div className="pt-2 border-t border-primary/10 space-y-3">
+                                    <p className="text-[11px] text-muted-foreground font-medium">¿Te invitó un amigo? Ingresa su código aquí:</p>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Ej: 123"
+                                            value={referralInput}
+                                            onChange={(e) => setReferralInput(e.target.value.replace(/\D/g, ""))}
+                                            className="flex-1 min-w-0 px-3 py-2 bg-background border border-border/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-inner"
+                                        />
+                                        <Button
+                                            size="sm"
+                                            disabled={!referralInput || isReferralLoading}
+                                            onClick={handleApplyReferral}
+                                            className="rounded-xl px-4 font-bold shadow-sm shrink-0 h-10 sm:h-9"
+                                        >
+                                            {isReferralLoading ? "..." : "Canjear"}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {client.referredBy && (
+                                <div className="flex items-center gap-2 pt-1 border-t border-primary/5">
+                                    <div className="p-1 bg-success/10 text-success rounded-full">
+                                        <Check size={12} />
+                                    </div>
+                                    <span className="text-[11px] text-success font-bold uppercase tracking-wider">¡Código de referido aplicado!</span>
+                                </div>
+                            )}
                         </div>
-
-                        {/* Canjear código de amigo */}
-                        {!client.referredBy && (
-                            <div className="pt-2 border-t border-primary/10 space-y-3">
-                                <p className="text-[11px] text-muted-foreground font-medium">¿Te invitó un amigo? Ingresa su código aquí:</p>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        placeholder="Ej: 123"
-                                        value={referralInput}
-                                        onChange={(e) => setReferralInput(e.target.value.replace(/\D/g, ""))}
-                                        className="flex-1 min-w-0 px-3 py-2 bg-background border border-border/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-inner"
-                                    />
-                                    <Button
-                                        size="sm"
-                                        disabled={!referralInput || isReferralLoading}
-                                        onClick={handleApplyReferral}
-                                        className="rounded-xl px-4 font-bold shadow-sm shrink-0 h-10 sm:h-9"
-                                    >
-                                        {isReferralLoading ? "..." : "Canjear"}
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-
-                        {client.referredBy && (
-                            <div className="flex items-center gap-2 pt-1 border-t border-primary/5">
-                                <div className="p-1 bg-success/10 text-success rounded-full">
-                                    <Check size={12} />
-                                </div>
-                                <span className="text-[11px] text-success font-bold uppercase tracking-wider">¡Código de referido aplicado!</span>
-                            </div>
-                        )}
                     </div>
                 </div>
 

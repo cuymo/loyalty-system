@@ -118,10 +118,10 @@ export function RewardsClientView({
 
                                     {isTierLocked && (
                                         <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center">
-                                            <div className="bg-destructive/90 text-destructive-foreground p-2 rounded-full mb-2 shadow-lg">
-                                                <Lock size={20} />
+                                            <div className="bg-background/60 text-foreground p-1.5 rounded-md mb-1.5 shadow-sm border border-border/50">
+                                                <Lock size={16} />
                                             </div>
-                                            <span className="text-[10px] font-bold uppercase tracking-wider bg-background/80 text-foreground px-2 py-0.5 rounded shadow-sm border border-border">
+                                            <span className="text-[9px] font-black uppercase tracking-widest bg-background/90 text-foreground px-2.5 py-1 rounded shadow-md border border-border/80">
                                                 Nivel {tierNames[reward.requiredTier as keyof typeof tierNames]}
                                             </span>
                                         </div>
@@ -133,9 +133,9 @@ export function RewardsClientView({
                                         </p>
                                     </div>
                                     <div
-                                        className={`absolute bottom-3 left-3 px-2 py-1 rounded shadow-sm text-[10px] font-bold uppercase tracking-wider z-20 ${reward.type === "discount"
-                                            ? "bg-info/90 text-info-foreground backdrop-blur-md"
-                                            : "bg-primary/90 text-primary-foreground backdrop-blur-md"
+                                        className={`absolute bottom-3 left-3 px-2.5 py-1 rounded shadow-sm text-[9px] font-black uppercase tracking-wider z-20 ${reward.type === "discount"
+                                            ? "bg-info text-info-foreground backdrop-blur-md"
+                                            : "bg-primary text-primary-foreground backdrop-blur-md"
                                             }`}
                                     >
                                         {reward.type === "discount" ? "Desc." : "Prod."}

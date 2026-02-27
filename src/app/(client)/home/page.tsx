@@ -118,9 +118,9 @@ export default async function ClientHomePage() {
                     <div className="relative z-10 pt-4 pb-1 space-y-4">
                         <div className="flex justify-between items-end px-1">
                             <div>
-                                <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border mb-2 shadow-sm ${tierStyle.badge}`}>
+                                <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md border mb-1.5 shadow-sm ${tierStyle.badge}`}>
                                     {tierStyle.icon}
-                                    <span className="text-[11px] font-black uppercase tracking-widest">
+                                    <span className="text-[10px] font-black uppercase tracking-widest">
                                         Nivel {{ "none": "Ninguno", "bronze": "Bronce", "silver": "Plata", "gold": "Oro", "vip": "VIP" }[client.vip.currentTier as string] || client.vip.currentTier.toUpperCase()}
                                     </span>
                                 </div>
@@ -138,7 +138,7 @@ export default async function ClientHomePage() {
 
                         {client.vip.currentTier !== "vip" ? (
                             <div className="space-y-2 mt-1">
-                                <div className="h-3 w-full bg-black/5 dark:bg-white/5 rounded-full overflow-hidden flex shadow-inner border border-black/5 dark:border-white/10 relative">
+                                <div className="h-2 w-full bg-black/10 dark:bg-white/10 rounded-full overflow-hidden flex shadow-inner border border-black/5 dark:border-white/5 relative">
                                     <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(to_right,white,transparent)]" />
                                     <div
                                         className={`h-full rounded-full transition-all duration-1000 ease-out relative ${tierStyle.progress}`}

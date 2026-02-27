@@ -15,29 +15,34 @@ export async function getReferralProgress(clientId: number) {
     const set = pubSettings.reduce((acc, curr) => ({ ...acc, [curr.key]: curr.value || "" }), {} as Record<string, string>);
 
     // Default values
-    const limit = parseInt(set.ref_monthly_limit || "3");
+    const enabled = set.ref_enabled === "true";
+    const baseGoal = parseInt(set.ref_goal_base || "3");
+    const increment = parseInt(set.ref_goal_increment || "2");
     const shareMessage = set.ref_share_message || "Usa mi link: {{link}}";
 
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    // Contar cuántos ha recibido o dado HISTÓRICAMENTE como referrer
+    const allReferralsAsReferrer = await db.select().from(referralHistory)
+        .where(eq(referralHistory.referrerId, clientId));
 
-    // Contar cuántos ha recibido o dado este mes
-    const monthReferrals = await db.select().from(referralHistory)
-        .where(
-            and(
-                or(
-                    eq(referralHistory.referrerId, clientId),
-                    eq(referralHistory.referredId, clientId)
-                ),
-                gte(referralHistory.createdAt, startOfMonth),
-                lte(referralHistory.createdAt, endOfMonth)
-            )
-        );
+    const totalRef = allReferralsAsReferrer.length;
+
+    // Calcular en qué ciclo de meta está
+    let currentCycle = 1;
+    let referralsNeededForCurrentCycle = baseGoal;
+    let totalAccounted = 0;
+
+    while (totalRef >= totalAccounted + referralsNeededForCurrentCycle) {
+        totalAccounted += referralsNeededForCurrentCycle;
+        currentCycle++;
+        referralsNeededForCurrentCycle = baseGoal + (currentCycle - 1) * increment;
+    }
+
+    const progressInCurrentCycle = totalRef - totalAccounted;
 
     return {
-        usedThisMonth: monthReferrals.length,
-        limit,
+        enabled,
+        usedThisMonth: progressInCurrentCycle, // Renombrado lógicamente para ui, pero es el progreso actual
+        limit: referralsNeededForCurrentCycle,
         shareMessage
     };
 }
@@ -59,45 +64,42 @@ export async function processReferral(tx: any, referrerId: number, referredId: n
     );
     if (existing.length > 0) return { success: false, error: "Ya has completado un ciclo de referido con este usuario antes." };
 
-    // 2. Limite vitalicio y Cuota mensual de referrer
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthReferrals = await tx.select().from(referralHistory)
-        .where(and(eq(referralHistory.referrerId, referrerId), gte(referralHistory.createdAt, startOfMonth)));
+    // 2. Limite vitalicio y Cuota por meta
+    const allReferralsAsReferrer = await tx.select().from(referralHistory)
+        .where(eq(referralHistory.referrerId, referrerId));
 
-    const monthlyLimit = parseInt(set.ref_monthly_limit || "3");
-    const lifetimeLimit = parseInt(set.ref_lifetime_limit || "20");
+    const totalRef = allReferralsAsReferrer.length;
+    const baseGoal = parseInt(set.ref_goal_base || "3");
+    const increment = parseInt(set.ref_goal_increment || "2");
 
+    const bonusReferred = parseInt(set.ref_points_referred || "1"); // 1 punto base para quien usa el código
+    const bonusReferrer = parseInt(set.ref_points_referrer || "50"); // Premio al llenar meta
+
+    // Calcular si la meta se completó con este nuevo referido (+1)
+    let currentCycle = 1;
+    let referralsNeededForCurrentCycle = baseGoal;
+    let totalAccounted = 0;
+
+    while (totalRef >= totalAccounted + referralsNeededForCurrentCycle) {
+        totalAccounted += referralsNeededForCurrentCycle;
+        currentCycle++;
+        referralsNeededForCurrentCycle = baseGoal + (currentCycle - 1) * increment;
+    }
+
+    const progressInCurrentCycle = totalRef - totalAccounted + 1; // Le sumamos 1 porque es el nuevo referido actual
     let pointsForReferrer = 0;
 
-    // Determinando bonos dynamicamente según tier del referrer
-    // Asumimos que los tiers se basan en lifetimePoints. 
-    // Simplified logic para sacar su nivel y bono:
-    const tierBronze = parseInt(set.tier_bronze_points || "100");
-    const tierSilver = parseInt(set.tier_silver_points || "500");
-    const tierGold = parseInt(set.tier_gold_points || "1000");
-    const tierVip = parseInt(set.tier_vip_points || "5000");
-
-    let bonusReferrer = parseInt(set.ref_points_referrer_bronze || "50"); // base
-    if (referrer.lifetimePoints >= tierVip) bonusReferrer = parseInt(set.ref_points_referrer_vip || "150");
-    else if (referrer.lifetimePoints >= tierGold) bonusReferrer = parseInt(set.ref_points_referrer_gold || "100");
-    else if (referrer.lifetimePoints >= tierSilver) bonusReferrer = parseInt(set.ref_points_referrer_silver || "70");
-
-    const bonusReferred = parseInt(set.ref_points_referred || "50");
-
-    if (monthReferrals.length >= monthlyLimit) { // Excedió cuota mensual
-        pointsForReferrer = 0; // Se asocia igual, pero sin ganar puntos el referente. (Opcional dar error: return { success: false, error: "Límite mensual del referente alcanzado."}; vamos a evitar error duro y solo no dar puntos)
-    } else if (referrer.referralCount >= lifetimeLimit) {
-        pointsForReferrer = 0;
-    } else {
+    if (progressInCurrentCycle >= referralsNeededForCurrentCycle) {
+        // Meta alcanzada!
         pointsForReferrer = bonusReferrer;
-        // Update Referrer
-        await tx.update(clients).set({
-            referralCount: sql`${clients.referralCount} + 1`,
-            points: sql`${clients.points} + ${pointsForReferrer}`,
-            lifetimePoints: sql`${clients.lifetimePoints} + ${pointsForReferrer}`
-        }).where(eq(clients.id, referrerId));
     }
+
+    // Update Referrer
+    await tx.update(clients).set({
+        referralCount: sql`${clients.referralCount} + 1`,
+        points: sql`${clients.points} + ${pointsForReferrer}`,
+        lifetimePoints: sql`${clients.lifetimePoints} + ${pointsForReferrer}`
+    }).where(eq(clients.id, referrerId));
 
     // Update Referred
     await tx.update(clients).set({
@@ -126,8 +128,8 @@ export async function processReferral(tx: any, referrerId: number, referredId: n
     if (pointsForReferrer > 0) {
         await tx.insert(appNotifications).values({
             clientId: referrerId,
-            title: "¡Bono de Invitación!",
-            body: `${referred.username} usó tu invitación. ¡Ganaste ${pointsForReferrer} puntos!`,
+            title: "¡Meta de Invitaciones Completada!",
+            body: `Has completado tu meta actual de invitaciones. ¡Ganaste ${pointsForReferrer} puntos!`,
             isRead: false,
             type: "referral_success"
         });
