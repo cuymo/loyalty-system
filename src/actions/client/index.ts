@@ -249,7 +249,7 @@ export async function verifyOtp(phone: string, otp: string) {
         await db.insert(appNotifications).values({
             clientId: existingClient.id,
             title: "Inicio de Sesión",
-            body: `Has iniciado sesión en un nuevo dispositivo el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}.`,
+            body: `Has iniciado sesión en un nuevo dispositivo el ${new Date().toLocaleDateString('es-EC')} a las ${new Date().toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' })}.`,
             isRead: false,
             type: "login"
         });
@@ -337,7 +337,7 @@ export async function registerClient(data: {
         await db.insert(appNotifications).values({
             clientId: existingPhone.id,
             title: "Cuenta Reactivada e Inicio de Sesión",
-            body: `Has reactivado tu cuenta e iniciado sesión el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}.`,
+            body: `Has reactivado tu cuenta e iniciado sesión el ${new Date().toLocaleDateString('es-EC')} a las ${new Date().toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' })}.`,
             isRead: false,
             type: "account_reactivated"
         });

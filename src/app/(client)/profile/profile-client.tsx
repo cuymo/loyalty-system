@@ -40,6 +40,8 @@ interface ProfileClientProps {
         enabled: boolean;
         usedThisMonth: number;
         limit: number;
+        currentReward: number;
+        allCompleted: boolean;
         shareMessage: string;
     };
 }
@@ -220,11 +222,20 @@ export function ProfileClient({ client, avatars, referralProgress }: ProfileClie
                                         <span className="text-sm font-bold text-foreground block truncate">
                                             Tu Código: #{client.id.toString().padStart(6, '0')}
                                         </span>
-                                        <p className="text-[11px] text-muted-foreground leading-tight">Completa la meta para ganar puntos.</p>
-                                        <div className="mt-2 w-full bg-border rounded-full h-1.5 overflow-hidden">
-                                            <div className="bg-primary h-full transition-all" style={{ width: `${Math.min(100, (referralProgress.usedThisMonth / referralProgress.limit) * 100)}%` }} />
-                                        </div>
-                                        <p className="text-[10px] text-muted-foreground mt-1 text-right w-full">Progreso a la meta: {referralProgress.usedThisMonth}/{referralProgress.limit}</p>
+                                        <p className="text-[11px] text-muted-foreground leading-tight">
+                                            {referralProgress.allCompleted
+                                                ? "¡Has completado todas las metas! 🎉"
+                                                : `Invita ${referralProgress.limit - referralProgress.usedThisMonth} amigo(s) más para ganar ${referralProgress.currentReward} pts.`
+                                            }
+                                        </p>
+                                        {!referralProgress.allCompleted && (
+                                            <>
+                                                <div className="mt-2 w-full bg-border rounded-full h-1.5 overflow-hidden">
+                                                    <div className="bg-primary h-full transition-all" style={{ width: `${Math.min(100, (referralProgress.usedThisMonth / referralProgress.limit) * 100)}%` }} />
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground mt-1 text-right w-full">Progreso: {referralProgress.usedThisMonth}/{referralProgress.limit}</p>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                                 <Button

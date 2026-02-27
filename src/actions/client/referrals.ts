@@ -53,6 +53,8 @@ export async function getReferralProgress(clientId: number) {
         enabled,
         usedThisMonth: progressInCurrentCycle,
         limit: limitForCurrentCycle,
+        currentReward: activeMilestone?.reward ?? 0,
+        allCompleted: currentCycleIndex >= milestones.length,
         shareMessage
     };
 }

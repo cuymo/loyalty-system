@@ -172,7 +172,7 @@ export function ClientsClient({ initialClients, initialPendingRedemptions }: Cli
             c.birthDate || "N/A",
             c.referredBy || "N/A",
             c.referralCount || 0,
-            c.createdAt ? new Date(c.createdAt).toLocaleDateString() : "N/A"
+            c.createdAt ? new Date(c.createdAt).toLocaleDateString("es-EC") : "N/A"
         ]);
 
         const csvContent = "data:text/csv;charset=utf-8,"
@@ -379,7 +379,7 @@ export function ClientsClient({ initialClients, initialPendingRedemptions }: Cli
                                         <div className="flex flex-col items-start md:items-end gap-3 flex-shrink-0 border-t md:border-0 pt-3 md:pt-0 border-border/50">
                                             <div className="text-left md:text-right w-full flex justify-between md:block items-center">
                                                 <p className="font-bold text-foreground bg-secondary px-2 py-0.5 rounded-full text-xs md:text-sm inline-block md:mb-1">{red.pointsSpent} pts</p>
-                                                <p className="text-xs text-muted-foreground flexitems-center"><span className="md:hidden">Solicitado: </span>{new Date(red.createdAt).toLocaleDateString()}</p>
+                                                <p className="text-xs text-muted-foreground flexitems-center"><span className="md:hidden">Solicitado: </span>{new Date(red.createdAt).toLocaleDateString("es-EC")}</p>
                                             </div>
                                             <div className="flex items-center gap-2 w-full">
                                                 <Button
@@ -564,7 +564,7 @@ export function ClientsClient({ initialClients, initialPendingRedemptions }: Cli
                             <div className="grid grid-cols-3 gap-3">
                                 <div className="bg-muted rounded-lg p-3 justify-center flex flex-col items-center">
                                     <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 text-center">Registro</span>
-                                    <span className="text-sm font-semibold">{selectedClient.createdAt ? new Date(selectedClient.createdAt).toLocaleDateString("es-ES", { month: 'short', year: 'numeric' }) : "N/A"}</span>
+                                    <span className="text-sm font-semibold">{selectedClient.createdAt ? new Date(selectedClient.createdAt).toLocaleDateString("es-EC", { month: 'short', year: 'numeric' }) : "N/A"}</span>
                                 </div>
                                 <div className="bg-muted rounded-lg p-3 justify-center flex flex-col items-center">
                                     <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 text-center">Cumpleaños</span>
