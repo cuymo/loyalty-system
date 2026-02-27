@@ -214,7 +214,7 @@ export function ProfileClient({ client, avatars, referralProgress }: ProfileClie
 
                         <div className={`bg-primary/5 border-2 border-primary/20 rounded-2xl p-5 space-y-4 shadow-sm relative z-10 ${!referralProgress.enabled ? 'opacity-50 pointer-events-none select-none' : ''}`}>
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                <div className="flex items-center gap-3 w-full sm:w-auto">
+                                <div className="flex items-center gap-3 w-full sm:flex-1 min-w-0">
                                     <div className="p-2 bg-primary/10 text-primary rounded-xl shrink-0">
                                         <Users size={20} />
                                     </div>
@@ -238,7 +238,7 @@ export function ProfileClient({ client, avatars, referralProgress }: ProfileClie
                                         )}
                                     </div>
                                 </div>
-                                <div className="flex gap-2 w-full sm:w-auto mt-1 sm:mt-0 justify-end">
+                                <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0 shrink-0">
                                     <Button
                                         variant="outline"
                                         size="sm"
