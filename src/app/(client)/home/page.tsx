@@ -162,11 +162,11 @@ export default async function ClientHomePage() {
                     </div>
                 )}
 
-                <div className="relative flex items-center justify-between pt-5 mt-2 border-t border-border/30 z-10">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-black flex items-center gap-1.5 opacity-70">
+                <div className="relative flex items-center justify-between px-4 py-3 -mx-6 -mb-6 mt-4 bg-black/15 dark:bg-black/25 z-10 rounded-b-3xl">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-black flex items-center gap-1.5 opacity-80">
                         Crew Zingy Member
                     </span>
-                    <span className="text-[12px] font-black text-muted-foreground tracking-widest bg-background/30 px-2 py-0.5 rounded border border-border/20">
+                    <span className="text-[12px] font-black text-muted-foreground tracking-widest bg-white/10 dark:bg-white/5 px-2 py-0.5 rounded border border-white/10">
                         #{String(client.id).padStart(6, "0")}
                     </span>
                 </div>

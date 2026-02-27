@@ -238,33 +238,54 @@ export function ProfileClient({ client, avatars, referralProgress }: ProfileClie
                                         )}
                                     </div>
                                 </div>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                        const paddedId = client.id.toString().padStart(6, '0');
-                                        const referLink = `${window.location.origin}/register?ref=${paddedId}`;
-                                        const rawMessage = referralProgress.shareMessage
-                                            .replace("{{link}}", referLink)
-                                            .replace("{{username}}", client.username);
-
-                                        if (navigator.share) {
-                                            navigator.share({
-                                                title: 'Únete a Crew Zingy',
-                                                text: rawMessage,
-                                            }).catch(console.error);
-                                        } else {
+                                <div className="flex gap-2 w-full sm:w-auto">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            const paddedId = client.id.toString().padStart(6, '0');
+                                            const referLink = `${window.location.origin}/register?ref=${paddedId}`;
+                                            const rawMessage = referralProgress.shareMessage
+                                                .replace("{{link}}", referLink)
+                                                .replace("{{username}}", client.username);
                                             navigator.clipboard.writeText(rawMessage);
                                             const prevMsg = message;
-                                            setMessage("¡Mensaje y link copiados al portapapeles!");
+                                            setMessage("¡Mensaje copiado al portapapeles!");
                                             setTimeout(() => setMessage(prevMsg), 2000);
-                                        }
-                                    }}
-                                    className="h-9 sm:h-8 rounded-lg px-4 sm:px-3 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10 transition-all font-bold w-full sm:w-auto shrink-0"
-                                >
-                                    <Share2 size={14} />
-                                    Compartir
-                                </Button>
+                                        }}
+                                        className="h-9 sm:h-8 rounded-lg px-4 sm:px-3 text-xs gap-1.5 border-border text-foreground hover:bg-muted transition-all font-bold flex-1 sm:flex-initial"
+                                    >
+                                        <Copy size={14} />
+                                        Copiar
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            const paddedId = client.id.toString().padStart(6, '0');
+                                            const referLink = `${window.location.origin}/register?ref=${paddedId}`;
+                                            const rawMessage = referralProgress.shareMessage
+                                                .replace("{{link}}", referLink)
+                                                .replace("{{username}}", client.username);
+
+                                            if (navigator.share) {
+                                                navigator.share({
+                                                    title: 'Únete a Crew Zingy',
+                                                    text: rawMessage,
+                                                }).catch(console.error);
+                                            } else {
+                                                navigator.clipboard.writeText(rawMessage);
+                                                const prevMsg = message;
+                                                setMessage("¡Mensaje y link copiados al portapapeles!");
+                                                setTimeout(() => setMessage(prevMsg), 2000);
+                                            }
+                                        }}
+                                        className="h-9 sm:h-8 rounded-lg px-4 sm:px-3 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10 transition-all font-bold flex-1 sm:flex-initial"
+                                    >
+                                        <Share2 size={14} />
+                                        Compartir
+                                    </Button>
+                                </div>
                             </div>
 
                             {/* Canjear código de amigo */}
