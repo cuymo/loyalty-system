@@ -56,9 +56,7 @@ export const clients = mysqlTable("clients", {
     createdAt: timestamp().defaultNow().notNull(),
 });
 
-// ============================================
-// TABLA: campaigns (ELIMINADA)
-// ============================================
+
 
 // ============================================
 // TABLA: rewards

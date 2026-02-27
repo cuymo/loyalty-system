@@ -3,11 +3,10 @@
  * Descripcion: Layout mobile-first para la PWA del cliente con bottom nav
  * Fecha de creacion: 2026-02-21
  * Autor: Crew Zingy Dev
- * Fecha de modificacion: 2026-02-23
- * Descripcion de la modificacion: ThemeProvider independiente con storageKey="theme-client"
+ * Descripcion de la modificacion: Error 500 solventado usando redirect a api de kick
  */
 
-import { getClientSession, destroyClientSession } from "@/lib/auth/client-jwt";
+import { getClientSession } from "@/lib/auth/client-jwt";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ClientBottomNav } from "@/components/shared/client-nav";
@@ -31,13 +30,11 @@ export default async function ClientLayout({
     const [client] = await db.select().from(clients).where(eq(clients.id, session.clientId)).limit(1);
 
     if (!client) {
-        await destroyClientSession();
-        redirect("/login");
+        redirect("/api/auth/kick");
     }
 
     if (client.isBlocked) {
-        await destroyClientSession();
-        redirect("/login?blocked=" + encodeURIComponent(client.blockReason || ""));
+        redirect("/api/auth/kick?blocked=" + encodeURIComponent(client.blockReason || ""));
     }
 
     const settings = await getPublicSettings();

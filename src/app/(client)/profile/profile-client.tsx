@@ -213,12 +213,12 @@ export function ProfileClient({ client, avatars, referralProgress }: ProfileClie
                         )}
 
                         <div className={`bg-primary/5 border-2 border-primary/20 rounded-2xl p-5 space-y-4 shadow-sm relative z-10 ${!referralProgress.enabled ? 'opacity-50 pointer-events-none select-none' : ''}`}>
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                <div className="flex items-center gap-3 w-full sm:flex-1 min-w-0">
+                            <div className="flex flex-col gap-4">
+                                <div className="flex items-center gap-3 w-full">
                                     <div className="p-2 bg-primary/10 text-primary rounded-xl shrink-0">
                                         <Users size={20} />
                                     </div>
-                                    <div className="space-y-0.5 min-w-0 flex-1 pr-2">
+                                    <div className="space-y-0.5 min-w-0 flex-1">
                                         <span className="text-sm font-bold text-foreground block truncate">
                                             Tu Código: #{client.id.toString().padStart(6, '0')}
                                         </span>
@@ -238,7 +238,7 @@ export function ProfileClient({ client, avatars, referralProgress }: ProfileClie
                                         )}
                                     </div>
                                 </div>
-                                <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0 shrink-0">
+                                <div className="flex gap-2 w-full shrink-0">
                                     <Button
                                         variant="outline"
                                         size="sm"
