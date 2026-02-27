@@ -96,9 +96,10 @@ export function NotificationsClient({ initialNotifications }: NotificationsClien
                                 {notif.body}
                             </p>
                             <span className="text-[10px] text-muted-foreground/60 font-medium font-mono uppercase tracking-wider block mt-2">
-                                {new Date(notif.createdAt).toLocaleDateString("es-EC", {
-                                    day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"
-                                })}
+                                {new Date(notif.createdAt).toLocaleString("es-EC", {
+                                    timeZone: "America/Guayaquil",
+                                    day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: true
+                                }).replace(/\./g, '')}
                             </span>
                         </div>
                     </div>
