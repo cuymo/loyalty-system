@@ -7,9 +7,12 @@ export async function GET(req: NextRequest) {
     await destroyClientSession();
 
     const blockedMsg = req.nextUrl.searchParams.get("blocked");
-    const loginUrl = req.nextUrl.clone();
-    loginUrl.pathname = "/login";
-    loginUrl.search = ""; // clear old search params
+
+    // Forzamos la detección del host real para evitar que Node resuelva a 0.0.0.0
+    const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "localhost:3000";
+    const protocol = req.headers.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
+
+    const loginUrl = new URL("/login", `${protocol}://${host}`);
 
     if (blockedMsg) {
         loginUrl.searchParams.set("blocked", blockedMsg);
