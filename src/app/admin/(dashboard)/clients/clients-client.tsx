@@ -4,8 +4,10 @@
  * Fecha de creacion: 2026-02-21
  * Autor: Crew Zingy Dev
  * Fecha de modificacion: 2026-02-22
- * Descripcion: Tabla simplificada (usuario+puntos), click abre modal con info completa e historial
+// ...
  */
+
+"use client";
 
 import { useState, useMemo, useEffect } from "react";
 import { deleteClient, searchRedemptionTicket, getClientMovements, approveRedemption, rejectRedemption, blockClient, unblockClient } from "@/actions/admin";
