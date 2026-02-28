@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { searchRedemptionTicket } from "@/actions/admin";
+import { searchRedemptionTicket } from "@/features/admin/clients/actions/admin-clients";
 import { ShieldCheck, Search } from "lucide-react";
 import { useModalStore } from "@/lib/modal-store";
 import type { Redemption } from "@/types";

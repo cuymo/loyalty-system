@@ -7,7 +7,8 @@
 
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getClients, getPendingRedemptions } from "@/actions/admin";
+import { getClients } from "@/features/admin/clients/actions/admin-clients";
+import { getPendingRedemptions } from "@/features/admin/redemptions/actions/admin-redemptions";
 import { ClientsClient } from "./clients-client";
 
 export default async function ClientsPage() {

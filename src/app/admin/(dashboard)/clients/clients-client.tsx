@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useModalStore } from "@/lib/modal-store";
 import { Users, ShieldCheck, Gift, Download } from "lucide-react";
-import { approveRedemption } from "@/actions/admin";
+import { approveRedemption } from "@/features/admin/redemptions/actions/admin-redemptions";
 import { toast } from "@/lib/toast";
 
 // Modular tab components

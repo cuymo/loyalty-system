@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { clients, appNotifications } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { triggerWebhook } from "@/lib/webhook";
-import { getPublicSettings } from "@/actions/client"; // This just queries the 'settings' table, it's safe to use here.
+import { getPublicSettings } from "@/features/auth/actions/client-auth";
 
 // Secret to protect the cron endpoint
 const CRON_SECRET = process.env.CRON_SECRET;

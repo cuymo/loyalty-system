@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { markNotificationsAsRead } from "@/actions/client";
+import { markNotificationsAsRead } from "@/features/client/notifications/actions/client-notifications";
 import { Bell, Trophy, Info, Gift, CheckCircle2 } from "lucide-react";
 
 interface AppNotification {

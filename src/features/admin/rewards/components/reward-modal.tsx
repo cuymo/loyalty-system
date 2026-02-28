@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useModalStore } from "@/lib/modal-store";
-import { createReward, updateReward } from "@/actions/admin";
+import { createReward, updateReward } from "@/features/admin/rewards/actions/admin-rewards";
 import { useRouter } from "next/navigation";
 import { toast } from "@/lib/toast";
 import type { Reward } from "@/types";

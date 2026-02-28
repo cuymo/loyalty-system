@@ -7,7 +7,7 @@
 "use client";
 
 import { useState } from "react";
-import { updateSetting, dangerZoneReset } from "@/actions/admin";
+import { updateSetting, dangerZoneReset } from "@/features/admin/settings/actions/admin-settings";
 import { useRouter } from "next/navigation";
 import { toast } from "@/lib/toast";
 import type { Setting } from "@/types";

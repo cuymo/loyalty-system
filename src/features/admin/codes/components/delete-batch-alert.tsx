@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { deleteBatch } from "@/actions/admin";
+import { deleteBatch } from "@/features/admin/codes/actions/admin-codes";
 import { toast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { useModalStore } from "@/lib/modal-store";

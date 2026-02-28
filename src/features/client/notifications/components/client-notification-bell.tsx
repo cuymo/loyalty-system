@@ -6,7 +6,7 @@ Indicador de notificaciones (campana) para el cliente, con conteo en tiempo real
 
 import Link from "next/link";
 import { Bell } from "lucide-react";
-import { getUnreadNotificationsCount } from "@/actions/client";
+import { getUnreadNotificationsCount } from "@/features/client/notifications/actions/client-notifications";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";

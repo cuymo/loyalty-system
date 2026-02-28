@@ -8,7 +8,7 @@
 "use client";
 
 import { useState } from "react";
-import { updateClientProfile, logoutClient, deleteMyAccount, applyReferralCode } from "@/actions/client";
+import { updateClientProfile, logoutClient, deleteMyAccount, applyReferralCode } from "@/features/client/profile/actions/client-profile";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";

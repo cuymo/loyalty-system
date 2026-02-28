@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { adminNotifications } from "@/db/schema";
 import { desc, inArray } from "drizzle-orm";
 import { NotificationsClient } from "./notifications-client";
-import { markAdminNotificationsAsRead } from "@/actions/admin";
+import { markAdminNotificationsAsRead } from "@/features/admin/notifications/actions/admin-notifications";
 
 export const metadata = {
     title: "Notificaciones y Registro de Actividad - Crew Zingy",

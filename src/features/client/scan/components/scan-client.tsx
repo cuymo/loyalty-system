@@ -8,7 +8,7 @@
 "use client";
 
 import { useState } from "react";
-import { validateCode, redeemCode } from "@/actions/client";
+import { validateCode, redeemCode } from "@/features/client/scan/actions/client-scan";
 import { useRouter } from "next/navigation";
 import { QrCode, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";

@@ -15,7 +15,7 @@ import {
     ChevronRight,
 } from "lucide-react";
 import { useModalStore } from "@/lib/modal-store";
-import { getClientMovements } from "@/actions/admin";
+import { getClientMovements } from "@/features/admin/clients/actions/admin-clients";
 import { toast } from "@/lib/toast";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";

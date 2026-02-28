@@ -7,7 +7,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { registerClient, getAvailableAvatars, checkFieldAvailability } from "@/actions/client";
+import { registerClient, getAvailableAvatars, checkFieldAvailability } from "@/features/auth/actions/client-auth";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";

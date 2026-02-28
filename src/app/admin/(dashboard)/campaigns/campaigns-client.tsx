@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Users, History, Tag } from "lucide-react";
 
 import { useModalStore } from "@/lib/modal-store";
-import { getClientMovements } from "@/actions/admin";
+import { getClientMovements } from "@/features/admin/clients/actions/admin-clients";
 import { toast } from "@/lib/toast";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

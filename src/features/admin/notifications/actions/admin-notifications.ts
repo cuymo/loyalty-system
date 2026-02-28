@@ -68,3 +68,46 @@ export async function sendCustomNotification(
 
     return { success: true };
 }
+
+// ============================================
+// ADMIN NOTIFICATIONS (migrated from monolithic)
+// ============================================
+
+export async function getAdminNotifications() {
+    await requireAdminSession();
+    return db
+        .select()
+        .from(adminNotifications)
+        .where(inArray(adminNotifications.type, ["new_client", "new_redemption", "points_added"]))
+        .orderBy(desc(adminNotifications.createdAt))
+        .limit(20);
+}
+
+export async function getAdminUnreadCount() {
+    await requireAdminSession();
+    const unread = await db
+        .select()
+        .from(adminNotifications)
+        .where(
+            and(
+                eq(adminNotifications.isRead, false),
+                inArray(adminNotifications.type, ["new_client", "new_redemption", "points_added"])
+            )
+        );
+    return unread.length;
+}
+
+export async function markAdminNotificationsAsRead() {
+    await requireAdminSession();
+    await db
+        .update(adminNotifications)
+        .set({ isRead: true })
+        .where(
+            and(
+                eq(adminNotifications.isRead, false),
+                inArray(adminNotifications.type, ["new_client", "new_redemption", "points_added"])
+            )
+        );
+    return { success: true };
+}
+

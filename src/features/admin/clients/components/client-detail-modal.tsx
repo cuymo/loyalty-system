@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getClientMovements, unblockClient } from "@/actions/admin";
+import { getClientMovements, unblockClient } from "@/features/admin/clients/actions/admin-clients";
 import { toast } from "@/lib/toast";
 import { useModalStore } from "@/lib/modal-store";
 import { useRouter } from "next/navigation";

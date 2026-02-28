@@ -7,7 +7,7 @@
 
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getRewards } from "@/actions/admin";
+import { getRewards } from "@/features/admin/rewards/actions/admin-rewards";
 import { RewardsClient } from "./rewards-client";
 
 export default async function RewardsPage() {

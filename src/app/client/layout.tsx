@@ -10,7 +10,7 @@ import { getClientSession } from "@/lib/auth/client-jwt";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ClientBottomNav } from "@/components/layouts/client-nav";
-import { getPublicSettings } from "@/actions/client";
+import { getPublicSettings } from "@/features/auth/actions/client-auth";
 import { db } from "@/db";
 import { clients } from "@/db/schema";
 import { eq } from "drizzle-orm";

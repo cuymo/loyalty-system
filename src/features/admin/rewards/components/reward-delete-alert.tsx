@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useModalStore } from "@/lib/modal-store";
-import { deleteReward } from "@/actions/admin";
+import { deleteReward } from "@/features/admin/rewards/actions/admin-rewards";
 import { useRouter } from "next/navigation";
 import { toast } from "@/lib/toast";
 

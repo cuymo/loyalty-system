@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { rejectRedemption } from "@/actions/admin";
+import { rejectRedemption } from "@/features/admin/redemptions/actions/admin-redemptions";
 import { toast } from "@/lib/toast";
 import { useModalStore } from "@/lib/modal-store";
 import { useRouter } from "next/navigation";

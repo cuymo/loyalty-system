@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { updateSetting } from "@/actions/admin";
+import { updateSetting } from "@/features/admin/settings/actions/admin-settings";
 import { useRouter } from "next/navigation";
 import { Save, Crown } from "lucide-react";
 import { toast } from "@/lib/toast";

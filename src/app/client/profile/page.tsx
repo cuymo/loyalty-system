@@ -5,7 +5,8 @@
  * Autor: Crew Zingy Dev
  */
 
-import { getClientProfile, getAvailableAvatars } from "@/actions/client";
+import { getClientProfile } from "@/features/client/profile/actions/client-profile";
+import { getAvailableAvatars } from "@/features/auth/actions/client-auth";
 import { getReferralProgress } from "@/features/client/referrals/actions/client-referrals-logic";
 import { redirect } from "next/navigation";
 import { ProfileClient } from "@/features/client/profile/components/profile-client";

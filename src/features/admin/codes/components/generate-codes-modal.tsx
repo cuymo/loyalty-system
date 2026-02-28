@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { generateCodes } from "@/actions/admin";
+import { generateCodes } from "@/features/admin/codes/actions/admin-codes";
 import { useRouter } from "next/navigation";
 import { CalendarIcon } from "lucide-react";
 import { toast } from "@/lib/toast";

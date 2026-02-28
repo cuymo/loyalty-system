@@ -7,7 +7,7 @@
 
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getSettings } from "@/actions/admin";
+import { getSettings } from "@/features/admin/settings/actions/admin-settings";
 import { SettingsClient } from "./settings-client";
 
 export default async function SettingsPage() {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { updateAdminProfile } from "@/actions/admin";
+import { updateAdminProfile } from "@/features/admin/profile/actions/admin-profile";
 import { useRouter } from "next/navigation";
 import { Save, UserCircle } from "lucide-react";
 import { toast } from "@/lib/toast";

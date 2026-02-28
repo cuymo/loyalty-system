@@ -4,7 +4,7 @@
  */
 
 import { ScanClient } from "@/features/client/scan/components/scan-client";
-import { getClientProfile } from "@/actions/client";
+import { getClientProfile } from "@/features/client/profile/actions/client-profile";
 import { redirect } from "next/navigation";
 
 export default async function ScanPage() {

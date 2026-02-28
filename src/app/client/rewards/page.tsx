@@ -7,9 +7,9 @@
  * Descripcion: Añadido sistema de tabs con pestaña "Canjeados"
  */
 
-import { getClientProfile } from "@/actions/client";
-import { getAvailableRewards } from "@/actions/client";
-import { getMyRedemptions } from "@/actions/client";
+import { getClientProfile } from "@/features/client/profile/actions/client-profile";
+import { getAvailableRewards } from "@/features/client/rewards/actions/client-rewards";
+import { getMyRedemptions } from "@/features/client/rewards/actions/client-rewards";
 import { redirect } from "next/navigation";
 import { RewardsClientView } from "@/features/client/rewards/components/rewards-view";
 import { RewardsPageClient } from "@/features/client/rewards/components/rewards-page-client";

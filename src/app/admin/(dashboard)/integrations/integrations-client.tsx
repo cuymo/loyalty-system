@@ -7,7 +7,7 @@
 "use client";
 
 import { useState } from "react";
-import { updateSetting } from "@/actions/admin";
+import { updateSetting } from "@/features/admin/settings/actions/admin-settings";
 import { updateWebhookEvent } from "@/features/admin/integrations/actions";
 import { useRouter } from "next/navigation";
 import { Plug } from "lucide-react";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getCodes } from "@/actions/admin";
+import { getCodes } from "@/features/admin/codes/actions/admin-codes";
 import { Eye, Download } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";

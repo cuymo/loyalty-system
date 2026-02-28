@@ -6,7 +6,7 @@ Interfaz de inicio de sesión para clientes utilizando nombre de usuario y contr
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { loginClient, getPublicSettings } from "@/actions/client";
+import { loginClient, getPublicSettings } from "@/features/auth/actions/client-auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 

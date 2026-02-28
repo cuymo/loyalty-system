@@ -5,7 +5,7 @@
 
 import { getClientSession } from "@/lib/auth/client-jwt";
 import { redirect } from "next/navigation";
-import { getAppNotifications } from "@/actions/client";
+import { getAppNotifications } from "@/features/client/notifications/actions/client-notifications";
 import { NotificationsClient } from "@/features/client/notifications/components/notifications-client";
 import { Metadata } from "next";
 

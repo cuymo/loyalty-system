@@ -7,7 +7,7 @@
 
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getCodeBatches } from "@/actions/admin";
+import { getCodeBatches } from "@/features/admin/codes/actions/admin-codes";
 import { CodesClient } from "./codes-client";
 
 export default async function CodesPage() {

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Search, ShieldCheck, X } from "lucide-react";
-import { searchRedemptionTicket } from "@/actions/admin";
+import { searchRedemptionTicket } from "@/features/admin/clients/actions/admin-clients";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { blockClient } from "@/actions/admin";
+import { blockClient } from "@/features/admin/clients/actions/admin-clients";
 import { toast } from "@/lib/toast";
 import { useModalStore } from "@/lib/modal-store";
 import { useRouter } from "next/navigation";

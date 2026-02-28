@@ -8,7 +8,7 @@
 "use client";
 
 import { useState } from "react";
-import { requestRedemption } from "@/actions/client";
+import { requestRedemption } from "@/features/client/rewards/actions/client-rewards";
 import { useRouter } from "next/navigation";
 import { Gift, Check, X, ShieldAlert, Copy, MessageCircle, Lock } from "lucide-react";
 import type { Reward } from "@/types";

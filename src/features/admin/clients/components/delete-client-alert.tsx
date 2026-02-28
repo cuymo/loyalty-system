@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { deleteClient } from "@/actions/admin";
+import { deleteClient } from "@/features/admin/clients/actions/admin-clients";
 import { toast } from "@/lib/toast";
 import { useModalStore } from "@/lib/modal-store";
 import { useRouter } from "next/navigation";

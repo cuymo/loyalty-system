@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { ProfileClient } from "./profile-client";
-import { getAdminProfile } from "@/actions/admin";
+import { getAdminProfile } from "@/features/admin/profile/actions/admin-profile";
 
 export default async function ProfilePage() {
     const session = await auth();
