@@ -7,7 +7,7 @@
 | Componente   | Tecnología                                 |
 |---|---|
 | Framework    | Next.js 16 (App Router + React 19)         |
-| Base de Datos| MySQL 8 (vía Drizzle ORM)                  |
+| Base de Datos| PostgreSQL (vía Drizzle ORM)                  |
 | Auth Admin   | NextAuth v5                                |
 | Auth Cliente | JWT firmado (jose)                         |
 | UI           | shadcn/ui + Tailwind v4                    |
@@ -57,9 +57,9 @@ Crew Zingy está altamente optimizado para ser desplegado en plataformas PaaS au
 El repositorio contiene un `Dockerfile` *multi-stage* robusto, equipado con un `start.sh` que se encarga automáticamente de sincronizar tu base de datos y crear el usuario de inicialización sin esfuerzo manual por consola CLI.
 
 ### Resumen Rápido (Ver `INSTRUCCIONES.md` para detalles)
-1. **Instancia una MySQL** en tu panel de Dokploy.
+1. **Instancia un PostgreSQL** en tu panel de Dokploy.
 2. **Crea una nueva App** conectando a este Repositorio GitHub. Modo de construcción `Dockerfile`.
-3. **Agrega las Variables de Entorno** (Asegurándote que el `DATABASE_URL` apunte al "Internal Host" que Dokploy generó para MySQL).
+3. **Agrega las Variables de Entorno** (Asegurándote que el `DATABASE_URL` apunte al "Internal Host" que Dokploy generó para PostgreSQL).
 4. Dale al botón de **Deploy**. Dokploy configurará SSL mediante Traefik automáticamente.
 
 ---
@@ -71,7 +71,7 @@ Ver [`INSTRUCCIONES.md`](./INSTRUCCIONES.md) para la guía completa.
 ### Variables críticas:
 | Variable | Descripción |
 |---|---|
-| `DATABASE_URL` | URL de conexión a MySQL |
+| `DATABASE_URL` | URL de conexión a PostgreSQL |
 | `NEXTAUTH_SECRET` | Clave para cookies de sesión admin |
 | `CLIENT_JWT_SECRET` | Clave para tokens JWT de clientes |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Clave pública VAPID (push notifications) |

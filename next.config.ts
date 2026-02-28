@@ -1,15 +1,13 @@
 /**
- * next.config.ts
- * Descripcion: Configuracion de Next.js para Crew Zingy
- * Fecha de creacion: 2026-02-21
- * Autor: Crew Zingy Dev
- */
+ID: cfg_0002
+Configuración principal de Next.js, definiendo el modo de salida standalone y paquetes externos del servidor.
+*/
 
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  serverExternalPackages: ["mysql2", "bcryptjs"],
+  serverExternalPackages: ["postgres", "bcryptjs"],
 };
 
 export default nextConfig;

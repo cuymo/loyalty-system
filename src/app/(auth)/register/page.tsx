@@ -1,25 +1,12 @@
-/**
- * (auth)/register/page.tsx
- * Descripcion: Pagina de registro con Suspense wrapper para useSearchParams
- * Fecha de creacion: 2026-02-21
- * Autor: Crew Zingy Dev
- * Fecha de modificacion: 2026-02-21
- * Descripcion de la modificacion: Agregado Suspense boundary para compatibilidad con SSG
- */
+export const dynamic = "force-dynamic";
 
-import { Suspense } from "react";
-import { RegisterForm } from "./register-form";
+import { RegisterForm } from "@/features/auth/components/register-form";
+import { getClientSession } from "@/lib/auth/client-jwt";
+import { redirect } from "next/navigation";
 
-export default function RegisterPage() {
-    return (
-        <Suspense
-            fallback={
-                <div className="min-h-screen flex items-center justify-center bg-background">
-                    <div className="w-8 h-8 border-4 border-border border-t-white rounded-full animate-spin" />
-                </div>
-            }
-        >
-            <RegisterForm />
-        </Suspense>
-    );
+export default async function RegisterPage() {
+    const session = await getClientSession();
+    if (session) redirect("/client/home");
+
+    return <RegisterForm />;
 }

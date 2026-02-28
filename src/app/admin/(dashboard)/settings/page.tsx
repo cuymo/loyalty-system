@@ -17,10 +17,10 @@ export default async function SettingsPage() {
     const settingsList = await getSettings();
 
     return (
-        <div className="p-4 md:p-8 space-y-6">
+        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
             <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-foreground">Ajustes</h1>
-                <p className="text-muted-foreground mt-1">
+                <h1 className="text-2xl font-bold tracking-tight">Ajustes</h1>
+                <p className="text-muted-foreground">
                     Configuracion global de la plataforma
                 </p>
             </div>

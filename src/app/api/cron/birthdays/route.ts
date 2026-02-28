@@ -1,3 +1,7 @@
+/**
+ID: api_0004
+Tarea programada (Cron) para la asignación automática de puntos de cumpleaños a los clientes registrados.
+*/
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { clients, appNotifications } from "@/db/schema";
@@ -60,7 +64,7 @@ export async function GET(request: NextRequest) {
                 title: "¡Feliz Cumpleaños!",
                 body: `¡Esperamos que tengas un gran día! Te hemos regalado ${birthdayBonus} puntos para que los disfrutes.`,
                 isRead: false,
-                type: "birthday_gift"
+                type: "points_earned"
             });
 
             // Trigger Webhook

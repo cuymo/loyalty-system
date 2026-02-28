@@ -1,8 +1,7 @@
 /**
- * theme-provider.tsx
- * Descripcion: Wrapper para next-themes (soporte modo oscuro)
- * Autor: Crew Zingy Dev
- */
+ID: ui_0012
+Proveedor de contexto para la gestión de temas, permitiendo el cambio dinámico de apariencia.
+*/
 
 "use client";
 

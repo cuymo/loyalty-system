@@ -17,11 +17,11 @@ export default async function RewardsPage() {
     const rewardsList = await getRewards();
 
     return (
-        <div className="p-4 md:p-8 space-y-6">
+        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-bold text-foreground">Premios</h1>
-                    <p className="text-muted-foreground mt-1">
+                    <h1 className="text-2xl font-bold tracking-tight">Premios</h1>
+                    <p className="text-muted-foreground">
                         Gestiona el catalogo de recompensas
                     </p>
                 </div>

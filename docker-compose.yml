@@ -1,23 +1,22 @@
 # docker-compose.yml
-# Stack completo de PRODUCCIÓN — MySQL + App Next.js + Adminer
+# Stack completo de PRODUCCIÓN — PostgreSQL + App Next.js + Adminer
 # Uso: docker compose up -d --build
 
 services:
-  mysql:
-    image: mysql:lts
-    container_name: crew-zingy-mysql
+  postgres:
+    image: postgres:18-alpine
+    container_name: crew-zingy-postgres
     restart: unless-stopped
     ports:
-      - "${MYSQL_PORT:-3307}:3306"
+      - "${POSTGRES_PORT:-5432}:5432"
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - crew_zingy_mysql_data:/var/lib/mysql
+      - crew_zingy_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -31,8 +30,8 @@ services:
     ports:
       - "${APP_PORT:-3001}:3000"
     environment:
-      # Base de datos (apunta al servicio interno 'mysql')
-      DATABASE_URL: mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
+      # Base de datos (apunta al servicio interno 'postgres')
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       # Autenticacion
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL}
@@ -50,7 +49,7 @@ services:
       INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL}
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD}
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
 
   adminer:
@@ -60,9 +59,9 @@ services:
     ports:
       - "${ADMINER_PORT:-8081}:8080"
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
 
 volumes:
-  crew_zingy_mysql_data:
+  crew_zingy_postgres_data:
     driver: local

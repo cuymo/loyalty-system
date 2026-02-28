@@ -7,7 +7,8 @@
 
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getWebhookEvents, getSettings } from "@/actions/admin";
+import { getSettings } from "@/actions/admin";
+import { getWebhookEvents } from "@/features/integrations/actions";
 import { IntegrationsClient } from "./integrations-client";
 
 export default async function IntegrationsPage() {
@@ -18,10 +19,10 @@ export default async function IntegrationsPage() {
     const settings = await getSettings();
 
     return (
-        <div className="p-4 md:p-8 space-y-6">
+        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
             <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-foreground">Integraciones</h1>
-                <p className="text-muted-foreground mt-1">
+                <h1 className="text-2xl font-bold tracking-tight">Integraciones</h1>
+                <p className="text-muted-foreground">
                     Configura webhooks, Typebot y consulta la documentacion
                 </p>
             </div>

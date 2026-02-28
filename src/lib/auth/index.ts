@@ -39,7 +39,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 }
 
                 console.log(`[AUTH] Admin encontrado, verificando password...`);
-                const isPasswordValid = await bcrypt.compare(password, admin.password);
+                const isPasswordValid = await bcrypt.compare(password, admin.passwordHash);
 
                 if (!isPasswordValid) {
                     console.warn(`[AUTH] Password inválido para: ${email}`);
@@ -71,6 +71,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     id: String(admin.id),
                     email: admin.email,
                     name: admin.name,
+                    firstName: admin.firstName,
+                    lastName: admin.lastName,
                 };
             },
         }),

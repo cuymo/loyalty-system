@@ -1,25 +1,18 @@
 /**
- * index.ts
- * Descripcion: Pool de conexion MySQL y exportacion de la instancia de Drizzle ORM
- * Fecha de creacion: 2026-02-21
- * Autor: Crew Zingy Dev
- */
+ID: db_0004
+Instanciación y exportación del cliente de base de datos PostgreSQL y el ORM Drizzle con soporte para singleton en desarrollo.
+*/
 
-import { drizzle } from "drizzle-orm/mysql2";
-import mysql from "mysql2/promise";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import * as schema from "./schema";
 
-const globalForDb = globalThis as unknown as { poolConnection: mysql.Pool };
+const globalForDb = globalThis as unknown as { sql: postgres.Sql };
 
-const poolConnection = globalForDb.poolConnection || mysql.createPool({
-    uri: process.env.DATABASE_URL!,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-});
+const sql = globalForDb.sql || postgres(process.env.DATABASE_URL!, { max: 10 });
 
 if (process.env.NODE_ENV !== "production") {
-    globalForDb.poolConnection = poolConnection;
+    globalForDb.sql = sql;
 }
 
-export const db = drizzle(poolConnection, { schema, mode: "default" });
+export const db = drizzle(sql, { schema });

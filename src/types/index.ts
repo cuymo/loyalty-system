@@ -12,7 +12,6 @@ import type {
     rewards,
     codes,
     redemptions,
-    settings,
     webhookEvents,
 } from "@/db/schema";
 
@@ -22,7 +21,7 @@ export type Client = InferSelectModel<typeof clients>;
 export type Reward = InferSelectModel<typeof rewards>;
 export type Code = InferSelectModel<typeof codes>;
 export type Redemption = InferSelectModel<typeof redemptions>;
-export type Setting = InferSelectModel<typeof settings>;
+export type Setting = { key: string; value: string | null; createdAt?: Date; updatedAt?: Date };
 export type WebhookEvent = InferSelectModel<typeof webhookEvents>;
 
 // Tipos para respuestas de API

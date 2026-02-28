@@ -1,11 +1,7 @@
 /**
- * app/layout.tsx
- * Descripcion: Layout raiz de la aplicacion Crew Zingy
- * Fecha de creacion: 2026-02-21
- * Autor: Crew Zingy Dev
- * Fecha de modificacion: 2026-02-23
- * Descripcion de la modificacion: ThemeProvider removido del root, cada route group maneja su propio tema
- */
+ID: page_0001
+Layout raíz de la aplicación Crew Zingy, manejando fuentes, metadatos globales y configuración de viewport.
+*/
 
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";

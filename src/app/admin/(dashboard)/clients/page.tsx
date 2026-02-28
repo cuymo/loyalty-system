@@ -2,7 +2,7 @@
  * admin/clients/page.tsx
  * Descripcion: Modulo de Clientes con listado, detalle, WhatsApp y comprobador antifraude
  * Fecha de creacion: 2026-02-21
- * Autor: Crew Zingy Dev
+ * Refactorizado: 2026-02-28 — Migrado a shadcn Cards
  */
 
 import { auth } from "@/lib/auth";
@@ -18,10 +18,10 @@ export default async function ClientsPage() {
     const pendingRedemptions = await getPendingRedemptions();
 
     return (
-        <div className="p-4 md:p-8 space-y-6">
+        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
             <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-foreground">Clientes y Canjes</h1>
-                <p className="text-muted-foreground mt-1">
+                <h1 className="text-2xl font-bold tracking-tight">Clientes y Canjes</h1>
+                <p className="text-muted-foreground">
                     Visualiza y gestiona los clientes registrados y aprueba los canjes pendientes
                 </p>
             </div>

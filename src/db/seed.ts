@@ -1,53 +1,59 @@
 /**
- * seed.ts
- * Descripcion: Script para crear el primer administrador en la base de datos
- * Fecha de creacion: 2026-02-21
- * Autor: Crew Zingy Dev
- * 
- * Ejecucion: npx tsx src/db/seed.ts
- */
+ID: db_0005
+Script de inicialización de datos (Seed) para crear el administrador maestro y los eventos de webhook base.
+*/
 
 import "dotenv/config";
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle } from "drizzle-orm/postgres-js";
 import { sql } from "drizzle-orm";
-import mysql from "mysql2/promise";
+import postgres from "postgres";
 import bcrypt from "bcryptjs";
-import { admins, webhookEvents, settings } from "./schema";
+import { admins, webhookEvents } from "./schema";
 
 async function seed() {
     console.log("Conectando a la base de datos...");
 
-    const connection = await mysql.createConnection({
-        uri: process.env.DATABASE_URL!,
-    });
+    const sqlClient = postgres(process.env.DATABASE_URL!, { max: 1 });
+    const db = drizzle(sqlClient);
 
-    const db = drizzle(connection);
+    /**
+    ID: db_0006
+    Lógica de creación o actualización del administrador inicial basado en variables de entorno.
+    */
+    const adminEmail = process.env.INITIAL_ADMIN_EMAIL;
+    const rawPassword = process.env.INITIAL_ADMIN_PASSWORD;
 
-    // --- Seed Admin ---
-    const adminEmail = process.env.INITIAL_ADMIN_EMAIL || "admin@zingystore.com";
-    const rawPassword = process.env.INITIAL_ADMIN_PASSWORD || "&JU4mx_4fYh7Tv7*";
+    if (!adminEmail || !rawPassword) {
+        console.error("❌ ERROR: Para inicializar la BD necesitas proveer INITIAL_ADMIN_EMAIL e INITIAL_ADMIN_PASSWORD en tu .env");
+        process.exit(1);
+    }
+
     const adminPassword = await bcrypt.hash(rawPassword, 12);
 
     console.log("Creando administrador único global...");
     await db
         .insert(admins)
         .values({
-            id: 1, // Enforce strict ID 1
             email: adminEmail,
-            password: adminPassword,
+            passwordHash: adminPassword,
             name: "Admin Zingy",
+            firstName: "Admin",
+            lastName: "Zingy",
         })
-        .onDuplicateKeyUpdate({ set: { email: adminEmail, name: "Admin Zingy" } });
+        .onConflictDoUpdate({ target: admins.email, set: { name: "Admin Zingy", firstName: "Admin", lastName: "Zingy" } });
 
     // Destrucción de Intrusos: Eliminar a cualquier otro administrador inyectado
-    const deletedAdmins = await db.delete(admins).where(sql`id != 1`);
-    if (deletedAdmins[0].affectedRows > 0) {
-        console.warn(`\n  [ALERTA] Se eliminaron ${deletedAdmins[0].affectedRows} administradores intrusos de la base de datos.`);
+    const deletedAdmins = await db.delete(admins).where(sql`id != 1`).returning();
+    if (deletedAdmins.length > 0) {
+        console.warn(`\n  [ALERTA] Se eliminaron ${deletedAdmins.length} administradores intrusos de la base de datos.`);
     }
 
     console.log(`  Admin verificado exitosamente.`);
 
-    // --- Seed Webhook Events ---
+    /**
+    ID: db_0007
+    Registro de los eventos de webhook disponibles en el sistema para su posterior configuración.
+    */
     console.log("Registrando eventos de webhook...");
     const events = [
         "cliente.registrado",
@@ -78,43 +84,15 @@ async function seed() {
         await db
             .insert(webhookEvents)
             .values({ eventName, webhookUrl: null, isActive: false })
-            .onDuplicateKeyUpdate({ set: { eventName } });
+            .onConflictDoUpdate({ target: webhookEvents.eventName, set: { eventName } });
     }
 
     console.log(`  ${events.length} eventos registrados.`);
 
-    // --- Seed Settings ---
-    console.log("Configurando ajustes por defecto...");
-    const defaultSettings = [
-        { key: "client_notice", value: "Bienvenido a Crew Zingy" },
-        { key: "points_expiration_days", value: "365" },
-        { key: "typebot_id", value: process.env.NEXT_PUBLIC_TYPEBOT_ID || "" },
-        {
-            key: "typebot_api_host",
-            value: process.env.NEXT_PUBLIC_TYPEBOT_API_HOST || "",
-        },
-        { key: "tier_bronze_points", value: "100" },
-        { key: "tier_silver_points", value: "500" },
-        { key: "tier_gold_points", value: "1000" },
-        { key: "tier_vip_points", value: "5000" },
-        { key: "referral_bonus_referrer", value: "50" },
-        { key: "referral_bonus_referred", value: "50" },
-        { key: "referral_max_limit", value: "5" },
-        { key: "birthday_bonus_points", value: "200" },
-    ];
-
-    for (const setting of defaultSettings) {
-        await db
-            .insert(settings)
-            .values(setting)
-            .onDuplicateKeyUpdate({ set: { value: setting.value } });
-    }
-
-    console.log("  Ajustes operativos.\n");
     console.log("Seed completado exitosamente.");
 
 
-    await connection.end();
+    await sqlClient.end();
     process.exit(0);
 }
 

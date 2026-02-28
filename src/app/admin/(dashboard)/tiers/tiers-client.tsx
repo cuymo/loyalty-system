@@ -49,7 +49,7 @@ export function TiersClient({ initialSettings }: TiersClientProps) {
                     <div key={tier.key} className="bg-card border border-border rounded-2xl p-6 flex flex-col justify-between space-y-4 shadow-sm hover:shadow-md transition-shadow">
                         <div className="flex items-start gap-4">
                             <div className={`p-3 rounded-xl border ${tier.color}`}>
-                                <Crown className="w-6 h-6" />
+                                <Crown size={24} />
                             </div>
                             <div>
                                 <h3 className="text-lg font-bold text-foreground">{tier.label}</h3>

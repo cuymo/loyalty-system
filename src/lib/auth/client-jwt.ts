@@ -1,20 +1,28 @@
 /**
- * lib/auth/client-jwt.ts
- * Descripcion: Utilidades JWT para sesiones de clientes (separado de Auth.js admin)
- * Fecha de creacion: 2026-02-21
- * Autor: Crew Zingy Dev
- */
+ID: lib_0001
+Capa de utilidades JWT para la gestión de sesiones de clientes, independiente de los administradores.
+*/
 
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
+const clientSecret = process.env.CLIENT_JWT_SECRET;
+if (!clientSecret) {
+    console.warn("⚠️ ADVERTENCIA: CLIENT_JWT_SECRET no está configurado en .env");
+}
+
+const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET;
+
 const NEW_JWT_SECRET = new TextEncoder().encode(
-    process.env.CLIENT_JWT_SECRET || process.env.NEXTAUTH_SECRET || "fallback-secret-change-me"
+    clientSecret || NEXTAUTH_SECRET || "fallback-desarrollo-solo"
 );
 
-// Fallback al antiguo secret (durante 30 días para no desloguear usuarios)
+/**
+ID: lib_0002
+Definición de secretos JWT con soporte para rotación de llaves, asegurando la continuidad de las sesiones activas.
+*/
 const OLD_JWT_SECRET = new TextEncoder().encode(
-    process.env.NEXTAUTH_SECRET || "fallback-secret-change-me"
+    NEXTAUTH_SECRET || "fallback-desarrollo-solo"
 );
 
 const COOKIE_NAME = "crew-zingy-client-session";
@@ -25,6 +33,10 @@ export interface ClientSession {
     username: string;
 }
 
+/**
+ID: lib_0003
+Creación de una sesión de cliente firmada y almacenamiento en una cookie segura de larga duración.
+*/
 export async function createClientSession(payload: ClientSession) {
     const token = await new SignJWT({ ...payload })
         .setProtectedHeader({ alg: "HS256" })
@@ -44,6 +56,10 @@ export async function createClientSession(payload: ClientSession) {
     return token;
 }
 
+/**
+ID: lib_0004
+Recuperación y validación de la sesión del cliente desde las cookies, con lógica de actualización automática de tokens antiguos.
+*/
 export async function getClientSession(): Promise<ClientSession | null> {
     const cookieStore = await cookies();
     const token = cookieStore.get(COOKIE_NAME)?.value;
@@ -98,17 +114,26 @@ export async function getClientSession(): Promise<ClientSession | null> {
     }
 }
 
+/**
+ID: lib_0005
+Eliminación de la sesión actual del cliente borrando la cookie correspondiente.
+*/
 export async function destroyClientSession() {
     const cookieStore = await cookies();
     cookieStore.delete(COOKIE_NAME);
 }
 
-// ============================================
-// REGISTRATION TOKEN (Corto plazo, para asegurar el registro)
-// ============================================
+/**
+ID: lib_0006
+Gestión de Tokens de Registro temporales para asegurar el flujo de creación de cuenta.
+*/
 
 const REG_COOKIE_NAME = "crew-zingy-registration-token";
 
+/**
+ID: lib_0007
+Creación de un token de registro efímero (15 min) para validar el número de teléfono durante el onboarding.
+*/
 export async function createRegistrationToken(phone: string) {
     const token = await new SignJWT({ phone })
         .setProtectedHeader({ alg: "HS256" })
@@ -126,6 +151,10 @@ export async function createRegistrationToken(phone: string) {
     });
 }
 
+/**
+ID: lib_0008
+Verificación de la validez del token de registro contra el número de teléfono proporcionado.
+*/
 export async function verifyRegistrationToken(phone: string): Promise<boolean> {
     const cookieStore = await cookies();
     const token = cookieStore.get(REG_COOKIE_NAME)?.value;
@@ -139,6 +168,10 @@ export async function verifyRegistrationToken(phone: string): Promise<boolean> {
     }
 }
 
+/**
+ID: lib_0009
+Destrucción del token de registro una vez completado el proceso o por expiración.
+*/
 export async function destroyRegistrationToken() {
     const cookieStore = await cookies();
     cookieStore.delete(REG_COOKIE_NAME);

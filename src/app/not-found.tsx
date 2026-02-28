@@ -1,9 +1,7 @@
 /**
- * app/not-found.tsx
- * Descripcion: Página 404 (No encontrado) global para enlaces rotos
- * Fecha de creacion: 2026-02-24
- * Autor: Crew Zingy Dev
- */
+ID: page_0003
+Manejador global para rutas no encontradas (404), ofreciendo una interfaz amigable para reorientar al usuario.
+*/
 
 "use client";
 
@@ -35,7 +33,7 @@ export default function NotFound() {
 
                 <div className="pt-4 flex flex-col sm:flex-row gap-3 justify-center">
                     <Button asChild size="lg" className="rounded-xl">
-                        <Link href="/">
+                        <Link href="/client/home">
                             Volver al inicio
                         </Link>
                     </Button>

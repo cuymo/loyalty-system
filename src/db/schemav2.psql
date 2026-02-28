@@ -1,0 +1,556 @@
+-- ============================================
+-- SCHEMA: Crew Zingy (Single-Tenant, Sin QR, Con Inventario)
+-- Descripción: Plataforma de fidelización para un negocio, uso por admins y clientes.
+-- Versión: 2.2.0 (Comentada)
+-- ============================================
+
+-- ============================================
+-- 1. EXTENSIONES RECOMENDADAS
+-- (Herramientas extra de PostgreSQL)
+-- ============================================
+-- Nos permite generar IDs únicos universales (UUIDs) para los tickets de canje,
+-- así nadie puede adivinar el número de ticket de otro cliente.
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Nos permite encriptar contraseñas y otros datos sensibles directamente en la base de datos si es necesario.
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- ============================================
+-- 2. ENUMS (Listas de opciones fijas)
+-- (PostgreSQL permite definir listas cerradas de valores para evitar errores ortográficos)
+-- ============================================
+
+-- ¿Qué nivel tiene el cliente o qué nivel pide un premio?
+CREATE TYPE required_tier AS ENUM ('none', 'bronze', 'silver', 'gold', 'vip');
+
+-- ¿Qué tipo de cosas regalamos?
+-- discount = Descuento porcentual o fijo
+-- product = Artículo físico (ej: Gorra)
+-- credit = Saldo a favor (ej: $5.00)
+CREATE TYPE reward_type AS ENUM ('discount', 'product', 'credit');
+
+-- ¿En qué estado está un premio en el catálogo?
+-- active = Visible y canjeable
+-- inactive = Apagado temporalmente
+-- out_of_stock = Agotado (controlado por inventario)
+CREATE TYPE reward_status AS ENUM ('active', 'inactive', 'out_of_stock');
+
+-- ¿En qué estado está un canje (cuando el cliente pide un premio)?
+-- pending = El cliente solicitó el premio en la app, espera que le notifiquen
+-- approved = La petición fue aprobada
+-- rejected = La petición fue rechazada
+CREATE TYPE redemption_status AS ENUM ('pending', 'approved', 'rejected');
+
+-- Opciones para la campanita de notificaciones
+-- campaign_only_text = Mensaje de campaña solo de texto
+-- campaign_with_image = Mensaje de campaña con imagen
+-- campaign_with_points = Mensaje de campaña con puntos de regalo
+-- reward_available = Aviso de alcance de meta para un premio
+-- new_reward = Aviso de nuevo premio disponible
+-- points_earned = Aviso de puntos ganados
+-- points_spent = Aviso de puntos gastados
+CREATE TYPE notification_type AS ENUM ('campaign_only_text', 'campaign_with_image', 'campaign_with_points', 'reward_available', 'new_reward', 'points_earned', 'points_spent');
+
+-- ¿Por qué se ganaron o perdieron puntos? (Para el historial bancario)
+-- purchase = Otorgados tras una compra 
+-- admin_assigned_points = Admin los regaló manualmente
+-- redemption_in_reward = Gastados al sacar un premio
+-- referral_bonus = Ganados por invitar a un amigo
+-- campaign_gift = Ganados mediante una campaña masiva
+-- refund = Devolución de puntos (ej: canje cancelado, es decir si el admin cancela el canje se le devuelven los puntos al cliente)
+-- code_claim = Canje de un código promocional
+CREATE TYPE point_transaction_reason AS ENUM ('purchase', 'admin_assigned', 'redemption_in_reward', 'referral_bonus', 'campaign_gift', 'refund', 'code_claim');
+
+-- ¿En qué estado está un código promocional?
+CREATE TYPE code_status AS ENUM ('unused', 'used', 'expired');
+
+-- ============================================
+-- 3. TABLAS PRINCIPALES
+-- (Donde se guarda la información real)
+-- ============================================
+
+-- --------------------------------------------
+-- TABLA: admins
+-- Es el dueño que entra al panel de control (Dashboard).
+-- --------------------------------------------
+CREATE TABLE admins (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,  -- Para iniciar sesión
+    password_hash VARCHAR(255) NOT NULL, -- Clave encriptada
+    name VARCHAR(100) NOT NULL,          -- Nombre del dueño
+    last_login_at TIMESTAMP,             -- Cuándo fue la última vez que entró
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, -- Fecha de creacion
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, -- Fecha de actualizacion
+    
+    -- Restricción para asegurar que el email tenga el formato correcto "@algo.com"
+    CONSTRAINT chk_admin_email_format CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')
+);
+
+-- --------------------------------------------
+-- TABLA: clients
+-- Son los usuarios finales. Entran desde su celular o web (PWA).
+-- --------------------------------------------
+CREATE TABLE clients (
+    id SERIAL PRIMARY KEY,
+    phone VARCHAR(15) NOT NULL UNIQUE,      -- Su WhatsApp (Sin esto no pueden entrar)
+    username VARCHAR(50) NOT NULL UNIQUE,   -- Su @nombredeusuario
+    avatar_svg VARCHAR(100) NOT NULL DEFAULT 'default.svg',
+    birth_date DATE,
+    points BIGINT NOT NULL DEFAULT 0,          -- PUNTOS DISPONIBLES para gastar hoy
+    lifetime_points BIGINT NOT NULL DEFAULT 0, -- PUNTOS HISTÓRICOS (Para medir su nivel, nunca bajan)
+    referral_count INTEGER NOT NULL DEFAULT 0, -- A cuántos amigos ha traído
+    referred_by BIGINT REFERENCES clients(id) ON DELETE SET NULL, -- Quién lo invitó a él
+    wants_marketing BOOLEAN NOT NULL DEFAULT true,      -- ¿Aceptó recibir notificaciones de campañas?
+    wants_transactional BOOLEAN NOT NULL DEFAULT true,  -- ¿Aceptó recibir alertas de sus puntos?
+    wants_security BOOLEAN NOT NULL DEFAULT true,  -- ¿Quiere notificaciones de seguridad?
+    wants_in_whatsapp BOOLEAN NOT NULL DEFAULT true,  -- ¿Quiere notificaciones de WhatsApp?
+    wants_in_email BOOLEAN NOT NULL DEFAULT true,  -- ¿Quiere notificaciones de correo electrónico?
+    deleted_at TIMESTAMP,                          -- Si se borra la cuenta, se oculta en vez de destruirse para conservar historial
+    last_login_at TIMESTAMP,
+    login_count INTEGER NOT NULL DEFAULT 0,
+    is_blocked BOOLEAN NOT NULL DEFAULT false,     -- Si lo baneas, no puede entrar
+    block_reason TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, -- Fecha de creacion
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, -- Fecha de actualizacion
+    
+    -- ¡Imposible tener menos de 0 puntos! Esto detiene fraudes o bugs al instante.
+    CONSTRAINT chk_points_non_negative CHECK (points >= 0 AND lifetime_points >= 0),
+    CONSTRAINT chk_phone_numeric CHECK (phone ~ '^[0-9]+$'),
+    CONSTRAINT chk_login_count_non_negative CHECK (login_count >= 0)
+);
+
+-- --------------------------------------------
+-- TABLA: rewards
+-- Es la "Tienda" de premios que creas en el panel de control.
+-- --------------------------------------------
+CREATE TABLE rewards (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    image_url TEXT[] DEFAULT '{}', -- Array de URLs de imágenes
+    points_required INTEGER NOT NULL,                    -- ¿Cuánto cuesta sacarlo?
+    required_tier required_tier NOT NULL DEFAULT 'none',     -- Ej: "Solo para clientes VIP"
+    type reward_type NOT NULL,
+    status reward_status NOT NULL DEFAULT 'active',
+    stock INTEGER DEFAULT NULL,                          -- Si pones NULL, es infinito. Si pones número, se gasta.
+    deleted_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    CONSTRAINT chk_points_required_positive CHECK (points_required > 0),
+    CONSTRAINT chk_stock_non_negative CHECK (stock IS NULL OR stock >= 0)
+);
+
+-- --------------------------------------------
+-- TABLA: redemptions
+-- Es el "Ticket de compra". Se crea cuando un cliente pulsa "¡Quiero este premio!".
+-- --------------------------------------------
+CREATE TABLE redemptions (
+    id SERIAL PRIMARY KEY,
+    client_id BIGINT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    reward_id BIGINT NOT NULL REFERENCES rewards(id) ON DELETE CASCADE,
+    ticket_uuid VARCHAR(36) NOT NULL UNIQUE DEFAULT uuid_generate_v4(), -- Código digital único de este canje
+    points_spent INTEGER NOT NULL,                                      -- Garantiza saber cuánto le cobraron ese día
+    status redemption_status NOT NULL DEFAULT 'pending',                -- Empieza en pendiente
+    reviewed_at TIMESTAMP,                                              -- Fecha de revision
+    reviewed_by_admin_id BIGINT REFERENCES admins(id) ON DELETE SET NULL, -- Qué admin procesó o negó la entrega
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,            -- Fecha de creacion
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,            -- Fecha de actualizacion
+    
+    CONSTRAINT chk_points_spent_positive CHECK (points_spent > 0)
+);
+
+
+-- --------------------------------------------
+-- TABLA: webhook_events
+-- Para conectar tu sistema con otras plataformas
+-- --------------------------------------------
+CREATE TABLE webhook_events (
+    id SERIAL PRIMARY KEY,
+    event_name VARCHAR(100) NOT NULL UNIQUE,                            -- Nombre del evento
+    description TEXT,                                                    -- Descripcion del evento
+    webhook_url VARCHAR(500),                                            -- URL del webhook
+    is_active BOOLEAN NOT NULL DEFAULT true,                             -- ¿Está activo?
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,            -- Fecha de creacion
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,            -- Fecha de actualizacion
+    
+    CONSTRAINT chk_webhook_url_format CHECK (webhook_url IS NULL OR webhook_url ~ '^https?://')
+);
+
+-- --------------------------------------------
+-- TABLA: name_changes_history
+-- Si un usuario cambia su @username, guardas el récord 
+-- para evitar que alguien suplante identidad.
+-- --------------------------------------------
+CREATE TABLE name_changes_history (
+    id SERIAL PRIMARY KEY,
+    client_id BIGINT NOT NULL REFERENCES clients(id) ON DELETE CASCADE, -- ID del cliente
+    old_names TEXT[] NOT NULL,                                          -- Array de nombres anteriores
+    new_name VARCHAR(50) NOT NULL,                                      -- Nuevo nombre y actual
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,            -- Fecha de creacion
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL             -- Fecha de actualizacion
+);
+
+-- --------------------------------------------
+-- TABLA: app_notifications
+-- La campanita de alertas dentro de la App del cliente
+-- --------------------------------------------
+CREATE TABLE app_notifications (
+    id SERIAL PRIMARY KEY,
+    client_id BIGINT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    reward_id BIGINT REFERENCES rewards(id) ON DELETE CASCADE, -- Opcional: vincula la notificación a un premio!
+    title VARCHAR(255) NOT NULL,
+    body TEXT NOT NULL,
+    image_url TEXT[] DEFAULT '{}', -- Por si la campaña tiene imágenes u otra notificación
+    type notification_type NOT NULL, -- Uso estricto del ENUM de tu sistema
+    is_read BOOLEAN NOT NULL DEFAULT false, -- ¿Ya la vio?
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- --------------------------------------------
+-- TABLA: admin_notifications
+-- Avisos para ti (Dueño) en el Dashboard 
+-- Ej: "Hay 5 canjes pendientes de revisión urgente"
+-- --------------------------------------------
+CREATE TABLE admin_notifications (
+    id SERIAL PRIMARY KEY,
+    admin_id BIGINT REFERENCES admins(id) ON DELETE CASCADE,
+    type VARCHAR(50) NOT NULL,
+    message TEXT NOT NULL,
+    is_read BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- --------------------------------------------
+-- TABLA: client_groups
+-- Las segmentaciones.
+-- Ej: "Clientes inactivos más de 1 mes" o "Millenials que nunca han canjeado".
+-- --------------------------------------------
+CREATE TABLE client_groups (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL, -- Nombre de la segmentación
+    description TEXT, -- Descripcion de la segmentación
+    deleted_at TIMESTAMP, -- Fecha de eliminacion
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, -- Fecha de creacion
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL -- Fecha de actualizacion
+);
+
+-- --------------------------------------------
+-- TABLA: client_group_members
+-- Conecta al cliente con sus respectivos grupos
+-- --------------------------------------------
+CREATE TABLE client_group_members (
+    id SERIAL PRIMARY KEY,
+    group_id BIGINT NOT NULL REFERENCES client_groups(id) ON DELETE CASCADE, -- ID de la segmentación
+    client_id BIGINT NOT NULL REFERENCES clients(id) ON DELETE CASCADE, -- ID del cliente
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, -- Fecha de creacion
+    
+    CONSTRAINT uk_group_member UNIQUE (group_id, client_id)
+);
+
+-- --------------------------------------------
+-- TABLA: codes
+-- Códigos promocionales generados masivamente para imprimir o enviar.
+-- Al ingresarlo el cliente gana X puntos automáticamente.
+-- --------------------------------------------
+CREATE TABLE codes (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR(50) NOT NULL UNIQUE,          -- El código en sí (ej. XMAS2025)
+    status code_status NOT NULL DEFAULT 'unused', -- Si ya se usó o caducó
+    points_value INTEGER NOT NULL,             -- Cuántos puntos regala
+    batch_name VARCHAR(100) NOT NULL,          -- Nombre del lote (ej. "Reapertura Julio")
+    expiration_date TIMESTAMP NOT NULL,        -- Fecha límite para canjear
+    used_at TIMESTAMP,                         -- Cuándo se canjeó
+    used_by BIGINT REFERENCES clients(id) ON DELETE SET NULL, -- Quién lo canjeó
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL    -- Cuándo se generó
+);
+
+-- --------------------------------------------
+-- TABLA: referral_history
+-- Historial detallado de invitaciones para saber qué amigo metió a cuál,
+-- y saber si ya se les pagó el incentivo.
+-- --------------------------------------------
+CREATE TABLE referral_history (
+    id SERIAL PRIMARY KEY,
+    referrer_id BIGINT NOT NULL REFERENCES clients(id) ON DELETE CASCADE, -- ID del invitador
+    referred_id BIGINT NOT NULL REFERENCES clients(id) ON DELETE CASCADE, -- ID del nuevo cliente
+    points_referrer INTEGER NOT NULL DEFAULT 0, -- Cuánto le diste al invitador
+    points_referred INTEGER NOT NULL DEFAULT 0, -- Cuánto le diste al nuevo por unirse
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, -- Fecha de creacion
+    
+    CONSTRAINT chk_referral_points_non_negative CHECK (points_referrer >= 0 AND points_referred >= 0),
+    CONSTRAINT chk_referral_not_self CHECK (referrer_id != referred_id) -- Prohíbe que alguien se invite a sí mismo
+);
+
+-- --------------------------------------------
+-- TABLA: campaigns_history
+-- Registro de las veces que usaste la herramienta de marketing masivo.
+-- --------------------------------------------
+CREATE TABLE campaigns_history (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL, -- Titulo de la campaña
+    body TEXT NOT NULL, -- Descripcion de la campaña
+    image_url VARCHAR(500), -- Imagen de la campaña
+    points_gifted INTEGER NOT NULL DEFAULT 0, -- Puntos que se dieron
+    recipients_count INTEGER NOT NULL DEFAULT 0, -- Cantidad de destinatarios
+    sent_via_whatsapp BOOLEAN NOT NULL DEFAULT false, -- ¿Se envio por whatsapp?
+    sent_via_email BOOLEAN NOT NULL DEFAULT false, -- ¿Se envio por email?
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, -- Fecha de creacion
+    
+    CONSTRAINT chk_campaign_counts_non_negative CHECK (points_gifted >= 0 AND recipients_count >= 0) -- Prohíbe que alguien se invite a sí mismo
+);
+
+-- --------------------------------------------
+-- TABLA: point_transactions (★★★ EL MOTOR BANCARIO ★★★)
+-- Cada que un punto entra o sale, tiene que quedar anotado aquí 
+-- obligatoriamente. Así se detectan fraudes o errores humanos.
+-- --------------------------------------------
+CREATE TABLE point_transactions (
+    id SERIAL PRIMARY KEY,
+    client_id BIGINT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    amount BIGINT NOT NULL,                                       -- Ej: +50 (Sumar) o -100 (Gastar)
+    reason point_transaction_reason NOT NULL,                     -- ¿Por qué motivo exacto?
+    reference_id BIGINT,                                          -- ID del canje o campaña asociado (Rastreabilidad)
+    balance_after BIGINT,                                         -- Saldo que le quedó al cliente después de esto
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_by_admin_id BIGINT REFERENCES admins(id) ON DELETE SET NULL, -- Qué admin ejecutó la acción
+    
+    -- No puedes registrar una transacción de 0 puntos
+    CONSTRAINT chk_transaction_amount_not_zero CHECK (amount != 0)
+);
+
+-- ============================================
+-- 4. ÍNDICES ESTRATÉGICOS (Performance)
+-- Optimizaciones para que la base de datos lea millones
+-- de datos casi al instante sin colapsar el servidor.
+-- ============================================
+
+-- Admins
+CREATE INDEX idx_admins_email ON admins(email);
+
+-- Clients
+CREATE INDEX idx_clients_phone ON clients(phone);
+CREATE INDEX idx_clients_username ON clients(username);
+CREATE INDEX idx_clients_points ON clients(points);
+CREATE INDEX idx_clients_lifetime_points ON clients(lifetime_points);
+CREATE INDEX idx_clients_is_blocked ON clients(is_blocked);
+CREATE INDEX idx_clients_deleted_at ON clients(deleted_at);
+CREATE INDEX idx_clients_referral ON clients(referred_by);
+
+-- Rewards
+CREATE INDEX idx_rewards_status ON rewards(status);
+CREATE INDEX idx_rewards_type ON rewards(type);
+CREATE INDEX idx_rewards_points_required ON rewards(points_required);
+
+-- Redemptions
+CREATE INDEX idx_redemptions_client_id ON redemptions(client_id);
+CREATE INDEX idx_redemptions_reward_id ON redemptions(reward_id);
+CREATE INDEX idx_redemptions_status ON redemptions(status);
+CREATE INDEX idx_redemptions_ticket_uuid ON redemptions(ticket_uuid);
+
+-- Webhook Events
+CREATE INDEX idx_webhook_events_is_active ON webhook_events(is_active);
+
+-- Codes
+CREATE INDEX idx_codes_batch_name ON codes(batch_name);
+CREATE INDEX idx_codes_status ON codes(status);
+-- Índice para búsquedas rápidas por código único
+CREATE INDEX idx_codes_code ON codes(code);
+
+-- App Notifications
+CREATE INDEX idx_app_notifications_client_id ON app_notifications(client_id);
+CREATE INDEX idx_app_notifications_is_read ON app_notifications(is_read);
+CREATE INDEX idx_app_notifications_created_at ON app_notifications(created_at DESC);
+-- Índice compuesto para lecturas de notificaciones no leídas de un cliente (performance crítico)
+CREATE INDEX idx_app_notifications_unread ON app_notifications(client_id, is_read) WHERE is_read = false;
+
+-- Admin Notifications
+CREATE INDEX idx_admin_notifications_admin_id ON admin_notifications(admin_id);
+CREATE INDEX idx_admin_notifications_is_read ON admin_notifications(is_read);
+
+-- Client Groups
+CREATE INDEX idx_client_groups_deleted_at ON client_groups(deleted_at);
+
+-- Client Group Members
+CREATE INDEX idx_client_group_members_group_id ON client_group_members(group_id);
+CREATE INDEX idx_client_group_members_client_id ON client_group_members(client_id);
+-- Constraint único: un cliente no puede estar dos veces en el mismo grupo
+CREATE UNIQUE INDEX uk_group_member ON client_group_members(group_id, client_id);
+
+-- Referral History
+CREATE INDEX idx_referral_history_referrer_id ON referral_history(referrer_id);
+CREATE INDEX idx_referral_history_referred_id ON referral_history(referred_id);
+-- Índice compuesto para auditorías rápidas de referidos
+CREATE INDEX idx_referral_history_pair ON referral_history(referrer_id, referred_id);
+
+-- Campaigns History
+CREATE INDEX idx_campaigns_history_created_at ON campaigns_history(created_at DESC);
+
+-- Point Transactions
+CREATE INDEX idx_point_transactions_client_id ON point_transactions(client_id);
+CREATE INDEX idx_point_transactions_reason ON point_transactions(reason);
+CREATE INDEX idx_point_transactions_created_at ON point_transactions(created_at DESC);
+-- Índice compuesto para auditorías: historial de transacciones de un cliente
+CREATE INDEX idx_point_transactions_client_created ON point_transactions(client_id, created_at DESC);
+
+-- ============================================
+-- 5. TRIGGERS PARA "updated_at" AUTOMATICO
+-- ============================================
+
+-- Robot virtual que se asegura de actualizar siempre la fecha de tu "última modificación".
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Enganchamos este robot a todas tus tablas principales (Cada vez que edites, él trabaja)
+CREATE TRIGGER trg_admins_updated_at BEFORE UPDATE ON admins FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_clients_updated_at BEFORE UPDATE ON clients FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_rewards_updated_at BEFORE UPDATE ON rewards FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_redemptions_updated_at BEFORE UPDATE ON redemptions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_webhook_events_updated_at BEFORE UPDATE ON webhook_events FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_client_groups_updated_at BEFORE UPDATE ON client_groups FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_name_changes_history_updated_at BEFORE UPDATE ON name_changes_history FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- 6. VISTAS ÚTILES PARA REPORTES
+-- Estos son como "Filtros de Excel Guardados". Next.js consume
+-- estas vistas en lugar de hacer consultas pesadas en la base.
+-- ============================================
+
+-- Vista: Muestra los clientes activos y les asigna visualmente 
+-- su etiqueta o 'tier' según cuántos puntos históricos tengan.
+CREATE OR REPLACE VIEW v_client_summary AS
+SELECT 
+    c.id, c.username, c.phone, c.points, c.lifetime_points,
+    CASE 
+        WHEN c.lifetime_points >= 10000 THEN 'vip'::required_tier
+        WHEN c.lifetime_points >= 5000 THEN 'gold'::required_tier
+        WHEN c.lifetime_points >= 2000 THEN 'silver'::required_tier
+        WHEN c.lifetime_points >= 500 THEN 'bronze'::required_tier
+        ELSE 'none'::required_tier
+    END AS current_tier,
+    c.referral_count, c.is_blocked, c.last_login_at, c.created_at
+FROM clients c WHERE c.deleted_at IS NULL;
+
+-- Vista: Muestra a la contabilidad cuántas gorras o descuentos se
+-- han dado, y ayuda a auditar los puntos totales canjeados.
+CREATE OR REPLACE VIEW v_redemption_stats AS
+SELECT 
+    r.id AS reward_id, r.name AS reward_name, r.points_required, r.stock,
+    COUNT(red.id) AS total_redemptions,
+    SUM(red.points_spent) AS total_points_redeemed,
+    COUNT(red.id) FILTER (WHERE red.status = 'approved') AS approved_count,
+    COUNT(red.id) FILTER (WHERE red.status = 'rejected') AS rejected_count,
+    COUNT(red.id) FILTER (WHERE red.status = 'pending') AS pending_count
+FROM rewards r LEFT JOIN redemptions red ON r.id = red.reward_id
+GROUP BY r.id, r.name, r.points_required, r.stock;
+
+-- Vista: Panel principal para el dashboard de Administrador
+CREATE OR REPLACE VIEW v_global_summary AS
+SELECT 
+    COUNT(DISTINCT c.id) FILTER (WHERE c.deleted_at IS NULL) AS total_clients,
+    COUNT(DISTINCT c.id) FILTER (WHERE c.deleted_at IS NULL AND c.is_blocked = false) AS active_clients,
+    SUM(c.points) FILTER (WHERE c.deleted_at IS NULL) AS total_points_in_circulation,
+    COUNT(DISTINCT red.id) AS total_redemptions,
+    COUNT(DISTINCT r.id) FILTER (WHERE r.status = 'active' AND r.deleted_at IS NULL) AS active_rewards
+FROM clients c
+CROSS JOIN (SELECT id FROM redemptions) red
+CROSS JOIN (SELECT id, status, deleted_at FROM rewards) r;
+
+-- Vista: Lista fácil de leer del historial de puntos para la App.
+CREATE OR REPLACE VIEW v_recent_point_transactions AS
+SELECT 
+    pt.id, pt.client_id, c.username AS client_username,
+    pt.amount, pt.reason, pt.reference_id, pt.balance_after, pt.created_at, a.name AS admin_name
+FROM point_transactions pt
+JOIN clients c ON pt.client_id = c.id
+LEFT JOIN admins a ON pt.created_by_admin_id = a.id
+ORDER BY pt.created_at DESC
+LIMIT 1000;
+
+-- ============================================
+-- 7. FUNCIONES UTILITARIAS Y TRIGGERS (MAGIA NATIVA)
+-- ============================================
+
+-- Función: Calcular tier (Nivel)
+CREATE OR REPLACE FUNCTION calculate_client_tier(lifetime_points BIGINT)
+RETURNS required_tier AS $$
+BEGIN
+    CASE 
+        WHEN lifetime_points >= 10000 THEN RETURN 'vip'::required_tier;
+        WHEN lifetime_points >= 5000 THEN RETURN 'gold'::required_tier;
+        WHEN lifetime_points >= 2000 THEN RETURN 'silver'::required_tier;
+        WHEN lifetime_points >= 500 THEN RETURN 'bronze'::required_tier;
+        ELSE RETURN 'none'::required_tier;
+    END CASE;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+
+-- Función Mágica: "Añadir o restar puntos"
+-- En vez de que Next.js o React calculen la resta (lo que permite fraudes de internet o clics duplicados),
+-- esta función bancaria hace toda la lógica matemática internamente de forma a prueba de fallos.
+CREATE OR REPLACE FUNCTION add_point_transaction(
+    p_client_id BIGINT,
+    p_amount BIGINT,
+    p_reason point_transaction_reason,
+    p_reference_id BIGINT DEFAULT NULL,
+    p_admin_id BIGINT DEFAULT NULL
+)
+RETURNS BIGINT AS $$
+DECLARE
+    v_new_balance BIGINT;
+    v_transaction_id BIGINT;
+BEGIN
+    -- 1. Actualizar el saldo (Suma matemática directa)
+    UPDATE clients 
+    SET points = points + p_amount,
+        lifetime_points = CASE WHEN p_amount > 0 THEN lifetime_points + p_amount ELSE lifetime_points END,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = p_client_id
+    RETURNING points INTO v_new_balance;
+    
+    -- 2. Validar que exista y que nunca deje a nadie con saldo negativo (Abortaría todo el proceso)
+    IF v_new_balance IS NULL THEN RAISE EXCEPTION 'Client not found'; END IF;
+    IF v_new_balance < 0 THEN RAISE EXCEPTION 'Insufficient points'; END IF;
+    
+    -- 3. Imprime un recibo ineditable y permanente
+    INSERT INTO point_transactions (
+        client_id, amount, reason, reference_id, balance_after, created_by_admin_id
+    ) VALUES (
+        p_client_id, p_amount, p_reason, p_reference_id, v_new_balance, p_admin_id
+    ) RETURNING id INTO v_transaction_id;
+    
+    RETURN v_transaction_id;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Robot de Inventarios: Descontar stock al aprobar un canje
+-- Cada vez que el cajero toca "Aprobado" en un ticket, esta función busca
+-- el premio asociado y le resta 1 al carrito para que nadie más lo tome si llega a cero.
+CREATE OR REPLACE FUNCTION reduce_reward_stock_on_approval()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Solo aplica si el ticket apenas cambió a estado de aprobado
+    IF NEW.status = 'approved' AND OLD.status != 'approved' THEN
+        -- Actualizar inventario solo en productos que tienen límite
+        UPDATE rewards 
+        SET stock = stock - 1
+        WHERE id = NEW.reward_id AND stock IS NOT NULL AND stock > 0;
+        
+        -- Opcional: Si baja a Cero, podrías forzarlo a 'out_of_stock'
+        -- UPDATE rewards SET status = 'out_of_stock' WHERE id = NEW.reward_id AND stock = 0;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Alerta al Robot 2 cada vez que alguien edite cualquier Redempción
+CREATE TRIGGER trg_reduce_stock_after_approval 
+    AFTER UPDATE ON redemptions 
+    FOR EACH ROW EXECUTE FUNCTION reduce_reward_stock_on_approval();

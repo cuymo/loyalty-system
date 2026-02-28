@@ -21,14 +21,13 @@ export default async function AuditLogPage() {
         .limit(1000);
 
     return (
-        <div className="p-4 md:p-8 space-y-6">
+        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Registro de Actividad</h1>
                 <p className="text-muted-foreground">
                     Historial de auditoría de todas las acciones del sistema y clientes.
                 </p>
             </div>
-
             <AuditLogClient initialLogs={logs} />
         </div>
     );

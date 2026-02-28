@@ -1,16 +1,15 @@
 /**
- * admin/layout.tsx
- * Descripcion: Layout principal del panel de administracion con sidebar
+ * admin/(dashboard)/layout.tsx
+ * Descripcion: Layout del panel admin con sidebar shadcn refactorizado
  * Fecha de creacion: 2026-02-21
- * Autor: Crew Zingy Dev
- * Fecha de modificacion: 2026-02-21
- * Descripcion de la modificacion: Agregado sidebar de navegacion y SessionProvider
+ * Refactorizado: 2026-02-28 — Migrado a shadcn Sidebar system
  */
 
 import type { Metadata } from "next";
-import { AdminSidebar } from "@/components/admin/sidebar";
 import { SessionProvider } from "next-auth/react";
-import { Toaster } from "@/components/ui/sonner";
+import { AppSidebar } from "@/components/app-sidebar";
+import { SiteHeader } from "@/components/site-header";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 export const metadata: Metadata = {
     title: "Crew Zingy - Admin",
@@ -24,11 +23,15 @@ export default function AdminLayout({
 }) {
     return (
         <SessionProvider>
-            <div className="min-h-screen bg-background">
-                <AdminSidebar />
-                <main className="lg:ml-64 pt-14 min-h-screen">{children}</main>
-            </div>
-            <Toaster position="top-center" richColors />
+            <SidebarProvider>
+                <AppSidebar />
+                <SidebarInset>
+                    <SiteHeader />
+                    <main className="flex-1 px-4 pb-4 pt-2 lg:px-6 lg:pb-6 lg:pt-4">
+                        {children}
+                    </main>
+                </SidebarInset>
+            </SidebarProvider>
         </SessionProvider>
     );
 }

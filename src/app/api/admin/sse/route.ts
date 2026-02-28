@@ -1,3 +1,7 @@
+/**
+ID: api_0001
+Endpoint de Server-Sent Events (SSE) para el envío de notificaciones en tiempo real al panel administrativo.
+*/
 export const dynamic = 'force-dynamic';
 
 import { NextRequest } from 'next/server';

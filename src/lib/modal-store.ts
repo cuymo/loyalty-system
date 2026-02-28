@@ -1,9 +1,7 @@
 /**
- * lib/modal-store.ts
- * Descripcion: Store global Zustand para controlar visibilidad de modales/drawers
- * Fecha de creacion: 2026-02-23
- * Autor: Crew Zingy Dev
- */
+ID: lib_013
+Estado centralizado para la gestión de modales y drawers mediante Zustand, garantizando una IU reactiva.
+*/
 
 import { create } from "zustand";
 

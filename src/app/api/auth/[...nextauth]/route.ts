@@ -1,9 +1,7 @@
 /**
- * route.ts
- * Descripcion: Handler de Auth.js para Next.js App Router
- * Fecha de creacion: 2026-02-21
- * Autor: Crew Zingy Dev
- */
+ID: api_0003
+Punto de entrada principal para el manejo de autenticación NextAuth (Admin) mediante rutas dinámicas.
+*/
 
 import { handlers } from "@/lib/auth";
 

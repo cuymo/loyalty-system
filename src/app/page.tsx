@@ -1,18 +1,18 @@
 /**
- * app/page.tsx
- * Descripcion: Pagina raiz - redirige a /home si autenticado, o /login si no
- * Fecha de creacion: 2026-02-21
- * Autor: Crew Zingy Dev
- */
+ID: page_0002
+Página raíz encargada de la redirección inicial basada en el estado de autenticación del cliente.
+*/
 
 import { getClientSession } from "@/lib/auth/client-jwt";
 import { redirect } from "next/navigation";
+
+export const dynamic = "force-dynamic";
 
 export default async function RootPage() {
   const session = await getClientSession();
 
   if (session) {
-    redirect("/home");
+    redirect("/client/home");
   } else {
     redirect("/login");
   }

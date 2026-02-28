@@ -1,8 +1,7 @@
 /**
- * mode-toggle.tsx
- * Descripcion: Boton para alternar entre modo claro y oscuro.
- * Basado en Shadcn UI v4.
- */
+ID: ui_0011
+Interruptor de tema (claro/oscuro) con soporte para preferencias del sistema y persistencia.
+*/
 
 "use client";
 

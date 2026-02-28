@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Search } from "lucide-react";
 import {
     Table,
@@ -120,44 +121,46 @@ export function AuditLogClient({ initialLogs }: AuditLogClientProps) {
             </div>
 
             {/* Tabla */}
-            <div className="rounded-2xl border border-border bg-card overflow-hidden">
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow className="bg-muted/50 hover:bg-muted/50 border-b border-border">
-                                <TableHead className="w-[180px] font-semibold pl-4 sm:pl-6 h-12">Fecha</TableHead>
-                                <TableHead className="w-[150px] font-semibold h-12">Tipo de Evento</TableHead>
-                                <TableHead className="font-semibold px-4 h-12 text-left">Mensaje de Auditoría</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredLogs.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={3} className="text-center py-12 text-muted-foreground">
-                                        No se encontraron registros de auditoría que coincidan con la búsqueda.
-                                    </TableCell>
+            <Card>
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-muted/50 hover:bg-muted/50 border-b border-border">
+                                    <TableHead className="w-[180px] font-semibold pl-4 sm:pl-6 h-12">Fecha</TableHead>
+                                    <TableHead className="w-[150px] font-semibold h-12">Tipo de Evento</TableHead>
+                                    <TableHead className="font-semibold px-4 h-12 text-left">Mensaje de Auditoría</TableHead>
                                 </TableRow>
-                            ) : (
-                                filteredLogs.map((log) => (
-                                    <TableRow key={log.id} className="group hover:bg-muted/50 transition-colors cursor-default">
-                                        <TableCell className="text-sm text-foreground/80 whitespace-nowrap pl-4 sm:pl-6 py-4">
-                                            {format(new Date(log.createdAt), "dd MMM yyyy HH:mm", { locale: es })}
-                                        </TableCell>
-                                        <TableCell className="py-4">
-                                            <Badge variant="outline" className={`font-medium scale-90 origin-left border-transparent ${getTypeBadgeColor(log.type)}`}>
-                                                {formatTypeLabel(log.type)}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-sm font-medium text-foreground px-4 py-4">
-                                            {log.message}
+                            </TableHeader>
+                            <TableBody>
+                                {filteredLogs.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={3} className="text-center py-12 text-muted-foreground">
+                                            No se encontraron registros de auditoría que coincidan con la búsqueda.
                                         </TableCell>
                                     </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-            </div>
+                                ) : (
+                                    filteredLogs.map((log) => (
+                                        <TableRow key={log.id} className="group hover:bg-muted/50 transition-colors cursor-default">
+                                            <TableCell className="text-sm text-foreground/80 whitespace-nowrap pl-4 sm:pl-6 py-4">
+                                                {format(new Date(log.createdAt), "dd MMM yyyy HH:mm", { locale: es })}
+                                            </TableCell>
+                                            <TableCell className="py-4">
+                                                <Badge variant="outline" className={`font-medium scale-90 origin-left border-transparent ${getTypeBadgeColor(log.type)}`}>
+                                                    {formatTypeLabel(log.type)}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-sm font-medium text-foreground px-4 py-4">
+                                                {log.message}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
             <div className="text-xs text-muted-foreground text-right px-2">
                 Mostrando los últimos 1000 registros de la base de datos.
             </div>

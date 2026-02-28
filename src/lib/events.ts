@@ -1,3 +1,7 @@
+/**
+ID: lib_0010
+Bus de eventos global para la comunicación interna entre el servidor y los clientes administrativos (SSE).
+*/
 import { EventEmitter } from "events";
 
 // Ensure a single instance across hot reloads in development

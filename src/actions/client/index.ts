@@ -1,17 +1,13 @@
 /**
- * actions/client/index.ts
- * Descripcion: Server Actions para operaciones de clientes (OTP, puntos, canje, perfil)
- * Fecha de creacion: 2026-02-21
- * Autor: Crew Zingy Dev
- * Fecha de modificacion: 2026-02-21
- * Descripcion de la modificacion: Implementacion completa de flujo OTP, canje, codigo, perfil
- */
+ID: act_0001
+Conjunto de Server Actions para la gestión integral de clientes, incluyendo autenticación OTP, registro, manejo de puntos y canjes.
+*/
 
 "use server";
 
 import { db } from "@/db";
-import { clients, codes, rewards, redemptions, settings, nameChangesHistory, appNotifications, adminNotifications } from "@/db/schema";
-import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
+import { clients, codes, rewards, redemptions, nameChangesHistory, appNotifications, adminNotifications } from "@/db/schema";
+import { eq, and, gte, lte, desc, sql, isNull } from "drizzle-orm";
 import {
     createClientSession,
     getClientSession,
@@ -26,23 +22,68 @@ import { readdir } from "fs/promises";
 import { join } from "path";
 import { triggerWebhook } from "@/lib/webhook";
 import { eventBus } from "@/lib/events";
-import { processReferral } from "./referrals";
+import { processReferral } from "@/features/referrals/actions/client-referrals-logic";
+import bcrypt from "bcryptjs";
 
-// ============================================
-// SETTINGS GLOBALES
-// ============================================
+export async function checkFieldAvailability(field: "username" | "email" | "phone", value: string) {
+    if (!value) return { available: true };
 
-export async function getPublicSettings() {
-    const all = await db.select().from(settings);
-    return all.reduce((acc, curr) => {
-        acc[curr.key] = curr.value || "";
-        return acc;
-    }, {} as Record<string, string>);
+    const normalizedValue = value.toLowerCase().trim();
+
+    try {
+        const [existing] = await db
+            .select({ id: clients.id, deletedAt: clients.deletedAt })
+            .from(clients)
+            .where(
+                field === "username"
+                    ? eq(clients.username, normalizedValue)
+                    : field === "email"
+                        ? eq(clients.email, normalizedValue)
+                        : eq(clients.phone, normalizedValue)
+            )
+            .limit(1);
+
+        if (!existing) return { available: true };
+
+        // Si la cuenta está eliminada (soft-delete), el username/email están "reservados" pero el phone indica reactivación
+        if (existing.deletedAt) {
+            return {
+                available: false,
+                isDeleted: true,
+                message: field === "phone"
+                    ? "Esta cuenta fue eliminada. ¿Deseas reactivarla?"
+                    : "Este dato pertenece a una cuenta eliminada."
+            };
+        }
+
+        return {
+            available: false,
+            isDeleted: false,
+            message: field === "username"
+                ? "Nombre de usuario ya en uso"
+                : field === "email"
+                    ? "Correo electrónico ya registrado"
+                    : "Este número de teléfono ya tiene una cuenta activa."
+        };
+    } catch (e) {
+        console.error(`Error checking ${field} availability:`, e);
+        return { available: false, message: "Error al validar" };
+    }
 }
 
-// ============================================
-// OTP (Simulado - en produccion usa Typebot/WhatsApp)
-// ============================================
+/**
+ID: act_0002
+Obtención de configuraciones públicas del sistema accesibles desde el lado del cliente.
+*/
+
+export async function getPublicSettings() {
+    return {} as Record<string, string>;
+}
+
+/**
+ID: act_0003
+Módulo de autenticación por One-Time Password (OTP) con control de expiración y límites de intentos por seguridad.
+*/
 
 // Store temporal de OTPs en memoria (en produccion: Redis o BD)
 const otpStore = new Map<string, { otp: string; expiresAt: number; sentAt: number }>();
@@ -56,6 +97,10 @@ const OTP_MAX_VERIFIES = 3;       // Máximo 3 intentos de verificación fallido
 const OTP_LOCKOUT_MS = 15 * 60 * 1000; // Bloqueo de 15 minutos
 const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutos de vida
 
+/**
+ID: act_0004
+Solicitud de un nuevo código OTP para un número de teléfono, validando cooldowns y bloqueos previos.
+*/
 export async function requestOtp(phone: string) {
     const now = Date.now();
     const rateLimit = rateLimitStore.get(phone) || { requests: 0, verifyAttempts: 0, lockedUntil: 0 };
@@ -101,7 +146,7 @@ export async function requestOtp(phone: string) {
                 title: "Alerta de Seguridad",
                 body: "Tu cuenta ha sido bloqueada por 15 minutos debido a demasiadas solicitudes de código.",
                 isRead: false,
-                type: "security_alert"
+                type: "campaign_only_text"
             });
         }
 
@@ -141,6 +186,10 @@ export async function requestOtp(phone: string) {
     return { success: true, cooldownRemaining: OTP_COOLDOWN_MS / 1000 };
 }
 
+/**
+ID: act_0005
+Verificación de un código OTP ingresado por el usuario contra el almacén temporal.
+*/
 export async function verifyOtp(phone: string, otp: string) {
     const now = Date.now();
     const rateLimit = rateLimitStore.get(phone) || { requests: 0, verifyAttempts: 0, lockedUntil: 0 };
@@ -179,7 +228,7 @@ export async function verifyOtp(phone: string, otp: string) {
                     title: "Alerta de Seguridad",
                     body: "Tu cuenta ha sido bloqueada temporalmente por demasiados intentos de código fallidos.",
                     isRead: false,
-                    type: "security_alert"
+                    type: "campaign_only_text"
                 });
             }
 
@@ -275,7 +324,7 @@ export async function verifyOtp(phone: string, otp: string) {
             title: "Inicio de Sesión",
             body: `Has iniciado sesión en un nuevo dispositivo el ${new Date().toLocaleDateString('es-EC', { timeZone: 'America/Guayaquil' })} a las ${new Date().toLocaleTimeString('es-EC', { timeZone: 'America/Guayaquil', hour: '2-digit', minute: '2-digit' })}.`,
             isRead: false,
-            type: "login"
+            type: "campaign_only_text"
         });
 
         // Trigger Webhook
@@ -297,45 +346,142 @@ export async function verifyOtp(phone: string, otp: string) {
     return { success: true, isNew: true, phone };
 }
 
+/**
+ID: act_0006
+Autenticación de clientes mediante nombre de usuario y contraseña, con validación de estado de cuenta.
+*/
+
+export async function loginClient(username: string, password: string) {
+    if (!username || !password) {
+        return { success: false, error: "Usuario y contraseña son obligatorios" };
+    }
+
+    const normalizedUsername = username.toLowerCase().trim();
+
+    const [client] = await db
+        .select()
+        .from(clients)
+        .where(
+            and(
+                eq(clients.username, normalizedUsername),
+                isNull(clients.deletedAt)
+            )
+        )
+        .limit(1);
+
+    if (!client) {
+        return { success: false, error: "Usuario o contraseña incorrectos" };
+    }
+
+    if (client.isBlocked) {
+        return { success: false, error: "Tu cuenta ha sido bloqueada por un administrador." };
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, client.passwordHash);
+    if (!isPasswordValid) {
+        return { success: false, error: "Usuario o contraseña incorrectos" };
+    }
+
+    // Update login stats
+    await db.update(clients).set({
+        lastLoginAt: new Date(),
+        loginCount: (client.loginCount || 0) + 1,
+        updatedAt: new Date(),
+    }).where(eq(clients.id, client.id));
+
+    await createClientSession({
+        clientId: client.id,
+        phone: client.phone,
+        username: client.username,
+    });
+
+    // Security notification
+    await db.insert(appNotifications).values({
+        clientId: client.id,
+        title: "Inicio de Sesión",
+        body: `Iniciaste sesión el ${new Date().toLocaleDateString('es-EC', { timeZone: 'America/Guayaquil' })} a las ${new Date().toLocaleTimeString('es-EC', { timeZone: 'America/Guayaquil', hour: '2-digit', minute: '2-digit' })}.`,
+        isRead: false,
+        type: "campaign_only_text"
+    });
+
+    return { success: true };
+}
+
+/**
+ID: act_0007
+Registro de nuevos clientes o reactivación de cuentas eliminadas, incluyendo hashing de contraseña y referidos.
+*/
+
 export async function registerClient(data: {
     phone: string;
+    email: string;
     username: string;
+    password: string;
     avatarSvg: string;
     birthDate: string;
     referredByCode?: number;
     wantsMarketing?: boolean;
     wantsTransactional?: boolean;
 }) {
-    // Verificar token temporal de registro para evitar acceso directo via URL
-    const isValidToken = await verifyRegistrationToken(data.phone);
-    if (!isValidToken) {
-        return { success: false, error: "Tu sesión de registro expiró o es inválida. Por favor, verifica tu número nuevamente desde inicio." };
+    // Validar datos obligatorios
+    if (!data.password || data.password.length < 6) {
+        return { success: false, error: "La contraseña debe tener al menos 6 caracteres" };
     }
 
-    // Verificar unicidad de username
-    const [existingUsername] = await db
-        .select()
-        .from(clients)
-        .where(eq(clients.username, data.username))
-        .limit(1);
-
-    if (existingUsername) {
-        return { success: false, error: "Este nombre de usuario ya esta en uso" };
+    if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+        return { success: false, error: "El correo electrónico no es válido" };
     }
 
-    // Comprobar si es una cuenta reactivada (phone ya existe, deletedAt = null tras reactivación)
+    // Hash password
+    const passwordHash = await bcrypt.hash(data.password, 10);
+
+    // Verificar si es una cuenta reactivada (phone ya existe en BD)
     const [existingPhone] = await db
         .select()
         .from(clients)
         .where(eq(clients.phone, data.phone))
         .limit(1);
 
-    if (existingPhone) {
-        // Cuenta reactivada: actualizar username, avatar y birthDate
+    // Verificar unicidad de username (no se permite reutilizar username de otros clientes)
+    const [existingUsername] = await db
+        .select()
+        .from(clients)
+        .where(eq(clients.username, data.username))
+        .limit(1);
+
+    if (existingUsername && (!existingPhone || existingUsername.id !== existingPhone.id)) {
+        return { success: false, error: "Este nombre de usuario ya esta en uso" };
+    }
+
+    // Verificar unicidad de email
+    const [existingEmail] = await db
+        .select()
+        .from(clients)
+        .where(eq(clients.email, data.email))
+        .limit(1);
+
+    // Si es reactivación, permitir cambiar email solo si no está en uso por otro cliente
+    // Si es nuevo cliente, rechazar si email ya existe
+    if (existingEmail && (!existingPhone || existingEmail.id !== existingPhone.id)) {
+        return { success: false, error: "Este correo electrónico ya esta en uso" };
+    }
+
+    if (existingPhone && !existingPhone.deletedAt) {
+        return {
+            success: false,
+            error: "Este número de teléfono ya está registrado y activo. Por favor, inicia sesión o recupera tu contraseña."
+        };
+    }
+
+    if (existingPhone && existingPhone.deletedAt) {
+        // Cuenta reactivada: actualizar username, avatar, birthDate, email y password
         await db.update(clients).set({
             username: data.username,
+            email: data.email,
+            passwordHash,
             avatarSvg: data.avatarSvg,
             birthDate: data.birthDate,
+            deletedAt: null, // Restaurar cuenta
             wantsMarketing: data.wantsMarketing ?? true,
             wantsTransactional: data.wantsTransactional ?? true,
         }).where(eq(clients.id, existingPhone.id));
@@ -363,7 +509,7 @@ export async function registerClient(data: {
             title: "Cuenta Reactivada e Inicio de Sesión",
             body: `Has reactivado tu cuenta e iniciado sesión el ${new Date().toLocaleDateString('es-EC', { timeZone: 'America/Guayaquil' })} a las ${new Date().toLocaleTimeString('es-EC', { timeZone: 'America/Guayaquil', hour: '2-digit', minute: '2-digit' })}.`,
             isRead: false,
-            type: "account_reactivated"
+            type: "campaign_only_text"
         });
 
         await db.insert(adminNotifications).values({
@@ -402,7 +548,9 @@ export async function registerClient(data: {
         .insert(clients)
         .values({
             phone: data.phone,
+            email: data.email,
             username: data.username,
+            passwordHash,
             avatarSvg: data.avatarSvg,
             birthDate: data.birthDate,
             referredBy: null, // assigned by processReferral
@@ -412,7 +560,7 @@ export async function registerClient(data: {
             lastLoginAt: new Date(),
             loginCount: 1,
         })
-        .$returningId();
+        .returning();
 
     let referralBonusReferred = 0;
 
@@ -454,7 +602,7 @@ export async function registerClient(data: {
         title: "¡Bienvenido a Crew Zingy!",
         body: `Te has registrado exitosamente. ${validReferrer ? `Empezaste con ${referralBonusReferred} puntos gracias a tu código de invitado.` : 'Disfruta de tus beneficios.'}`,
         isRead: false,
-        type: "welcome"
+        type: "campaign_only_text"
     });
 
     await db.insert(adminNotifications).values({
@@ -472,6 +620,10 @@ export async function registerClient(data: {
     return { success: true };
 }
 
+/**
+ID: act_0008
+Vinculación de un código de referido a la cuenta del cliente actual para otorgar beneficios mutuos.
+*/
 export async function applyReferralCode(code: string) {
     const session = await getClientSession();
     if (!session) return { success: false, error: "No autenticado" };
@@ -520,10 +672,15 @@ export async function applyReferralCode(code: string) {
 }
 
 
-// ============================================
-// PERFIL
-// ============================================
+/**
+ID: act_0009
+Bloque de funciones para la gestión de perfil de usuario, incluyendo niveles VIP y cambios de nombre.
+*/
 
+/**
+ID: act_0010
+Recuperación del perfil completo del cliente, calculando el nivel VIP y los cambios de nombre restantes en el ciclo actual.
+*/
 export async function getClientProfile() {
     const session = await getClientSession();
     if (!session) return null;
@@ -602,6 +759,10 @@ export async function getClientProfile() {
     return { ...client, changesRemaining, vip };
 }
 
+/**
+ID: act_0011
+Actualización de los datos del perfil del cliente, manejando restricciones en el cambio de nombre de usuario.
+*/
 export async function updateClientProfile(data: {
     username?: string;
     avatarSvg?: string;
@@ -665,7 +826,7 @@ export async function updateClientProfile(data: {
             await tx.update(clients).set(data).where(eq(clients.id, session.clientId));
             await tx.insert(nameChangesHistory).values({
                 clientId: session.clientId,
-                oldName: currentClient.username,
+                oldNames: [currentClient.username],
                 newName: data.username as string,
             });
         });
@@ -696,10 +857,15 @@ export async function updateClientProfile(data: {
     return { success: true };
 }
 
-// ============================================
-// NOTIFICACIONES IN-APP
-// ============================================
+/**
+ID: act_0012
+Sección de acciones para la gestión de notificaciones internas del sistema para el cliente.
+*/
 
+/**
+ID: act_0013
+Consulta del número de notificaciones no leídas para mostrar indicadores en la interfaz.
+*/
 export async function getUnreadNotificationsCount() {
     const session = await getClientSession();
     if (!session) return 0;
@@ -717,6 +883,10 @@ export async function getUnreadNotificationsCount() {
     return unread.length;
 }
 
+/**
+ID: act_0014
+Recuperación de la lista de notificaciones recientes del cliente, ordenadas cronológicamente.
+*/
 export async function getAppNotifications() {
     const session = await getClientSession();
     if (!session) return [];
@@ -729,6 +899,10 @@ export async function getAppNotifications() {
         .limit(20);
 }
 
+/**
+ID: act_0015
+Marca todas las notificaciones pendientes como leídas y revalida la ruta de notificaciones.
+*/
 export async function markNotificationsAsRead() {
     const session = await getClientSession();
     if (!session) return { success: false };
@@ -743,14 +917,22 @@ export async function markNotificationsAsRead() {
             )
         );
 
-    revalidatePath("/notifications");
+    revalidatePath("/client/notifications");
     return { success: true };
 }
 
+/**
+ID: act_0016
+Cierre de sesión del cliente mediante la destrucción de la cookie de sesión actual.
+*/
 export async function logoutClient() {
     await destroyClientSession();
 }
 
+/**
+ID: act_0017
+Eliminación lógica de la cuenta del cliente (soft delete), anonimizando el usuario y notificando al sistema.
+*/
 export async function deleteMyAccount() {
     const session = await getClientSession();
     if (!session) return { success: false, error: "No autenticado" };
@@ -766,7 +948,6 @@ export async function deleteMyAccount() {
         avatarSvg: "default.svg",
         wantsMarketing: false,
         wantsTransactional: false,
-        wantsInAppNotifs: false,
         deletedAt: new Date(),
     }).where(eq(clients.id, session.clientId));
 
@@ -794,10 +975,15 @@ export async function deleteMyAccount() {
     return { success: true };
 }
 
-// ============================================
-// CODIGOS QR
-// ============================================
+/**
+ID: act_0018
+Sección de acciones para el procesamiento de códigos QR y asignación de puntos.
+*/
 
+/**
+ID: act_0019
+Validación preliminar de un código QR para verificar su existencia, vigencia y estado de uso.
+*/
 export async function validateCode(codeStr: string) {
     const session = await getClientSession();
     if (!session) return { success: false, error: "No autenticado" };
@@ -829,6 +1015,10 @@ export async function validateCode(codeStr: string) {
     };
 }
 
+/**
+ID: act_0020
+Procesamiento atómico del canje de un código QR, sumando puntos al cliente y marcando el código como usado.
+*/
 export async function redeemCode(codeStr: string) {
     const session = await getClientSession();
     if (!session) return { success: false, error: "No autenticado" };
@@ -861,16 +1051,16 @@ export async function redeemCode(codeStr: string) {
             .set({
                 status: "used",
                 usedAt: new Date(),
-                usedByClientId: session.clientId,
+                usedBy: session.clientId,
             })
             .where(
                 and(
                     eq(codes.id, code.id),
                     eq(codes.status, "unused") // Atomic constraint
                 )
-            );
+            ).returning();
 
-        if (updateCodeResult[0].affectedRows === 0) {
+        if (updateCodeResult.length === 0) {
             throw new Error("El código ya fue reclamado por otro proceso");
         }
 
@@ -917,7 +1107,7 @@ export async function redeemCode(codeStr: string) {
         title: "¡Puntos Sumados!",
         body: `Has sumado ${code.pointsValue} puntos. Tu nuevo total es ${updatedClient?.points ?? 0} pts.`,
         isRead: false,
-        type: "points_added"
+        type: "points_earned"
     });
 
     await db.insert(adminNotifications).values({
@@ -963,7 +1153,7 @@ export async function redeemCode(codeStr: string) {
                 title: "¡Subiste de Nivel VIP!",
                 body: `¡Felicidades! Has alcanzado el nivel ${newTier.toUpperCase()}. Disfruta de nuevos beneficios y premios exclusivos.`,
                 isRead: false,
-                type: "tier_upgraded"
+                type: "campaign_only_text"
             });
         }
     }
@@ -986,10 +1176,15 @@ export async function redeemCode(codeStr: string) {
     };
 }
 
-// ============================================
-// CANJE DE PREMIOS
-// ============================================
+/**
+ID: act_0021
+Sección de acciones para la visualización y solicitud de canje de recompensas disponibles.
+*/
 
+/**
+ID: act_0022
+Listado de todas las recompensas con estado activo, ordenadas por costo de puntos.
+*/
 export async function getAvailableRewards() {
     return db
         .select()
@@ -998,6 +1193,10 @@ export async function getAvailableRewards() {
         .orderBy(rewards.pointsRequired);
 }
 
+/**
+ID: act_0023
+Generación de una solicitud de canje mediante una transacción atómica que verifica puntos y genera un ticket único.
+*/
 export async function requestRedemption(rewardId: number) {
     const session = await getClientSession();
     if (!session) return { success: false, error: "No autenticado" };
@@ -1034,9 +1233,9 @@ export async function requestRedemption(rewardId: number) {
                     eq(clients.id, session.clientId),
                     gte(clients.points, reward.pointsRequired) // Bloqueo anti-saldos negativos
                 )
-            );
+            ).returning();
 
-        if (updateClientResult[0].affectedRows === 0) {
+        if (updateClientResult.length === 0) {
             throw new Error("Puntos insuficientes");
         }
 
@@ -1061,7 +1260,7 @@ export async function requestRedemption(rewardId: number) {
         title: "Solicitud de Canje",
         body: `Has solicitado canjear: ${reward.name}. Descontamos ${reward.pointsRequired} pts. Tu solicitud está pendiente de aprobación.`,
         isRead: false,
-        type: "redemption_requested"
+        type: "points_spent"
     });
 
     // Opcional por WhatsApp (Transaccional)
@@ -1096,6 +1295,10 @@ export async function requestRedemption(rewardId: number) {
     return { success: true, ticketUuid };
 }
 
+/**
+ID: act_0024
+Obtención del historial de canjes del cliente actual, incluyendo detalles de la recompensa y estado del ticket.
+*/
 export async function getMyRedemptions() {
     const session = await getClientSession();
     if (!session) return [];

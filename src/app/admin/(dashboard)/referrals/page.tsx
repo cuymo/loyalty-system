@@ -5,7 +5,7 @@
  * Autor: Crew Zingy Dev
  */
 
-import { getReferralSettings, getReferralHistory } from "@/actions/admin/referrals";
+import { getReferralSettings, getReferralHistory } from "@/features/referrals/actions/admin-referrals";
 import { ReferralsClient } from "./referrals-client"; // component rendering ui
 
 export default async function ReferralsPage() {
@@ -13,14 +13,12 @@ export default async function ReferralsPage() {
     const history = await getReferralHistory();
 
     return (
-        <div className="p-4 md:p-8 space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl md:text-3xl font-bold text-foreground">Referidos</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Control absoluto sobre el programa de invitaciones. Configura las reglas, los premios, y visualiza el historial en tiempo real de quién ha invitado a quién para prevenir fraudes.
-                    </p>
-                </div>
+        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+            <div>
+                <h1 className="text-2xl font-bold tracking-tight">Referidos</h1>
+                <p className="text-muted-foreground">
+                    Control absoluto sobre el programa de invitaciones. Configura las reglas, los premios, y visualiza el historial.
+                </p>
             </div>
             <ReferralsClient initialSettings={settings} history={history} />
         </div>

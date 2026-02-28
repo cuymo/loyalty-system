@@ -1,25 +1,24 @@
 # docker-compose.db.yml
-# Descripcion: Docker Compose para entorno de desarrollo local (solo MySQL + Adminer)
+# Descripcion: Docker Compose para entorno de desarrollo local (solo PostgreSQL + Adminer)
 # Fecha de creacion: 2026-02-21
 # Autor: Crew Zingy Dev
 # NOTA: Puertos y nombres distintos al sistema anterior para evitar conflictos
 
 services:
-  mysql:
-    image: mysql:lts
-    container_name: crew-zingy-mysql
+  postgres:
+    image: postgres:18-alpine
+    container_name: crew-zingy-postgres
     restart: unless-stopped
     ports:
-      - "${MYSQL_PORT:-3307}:3306"
+      - "5433:5432"
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      POSTGRES_USER: crew_zingy_app
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: crew_zingy_db
     volumes:
-      - crew_zingy_mysql_data:/var/lib/mysql
+      - crew_zingy_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      test: [ "CMD-SHELL", "pg_isready -U crew_zingy_app -d crew_zingy_db" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -31,9 +30,9 @@ services:
     ports:
       - "${ADMINER_PORT:-8081}:8080"
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
 
 volumes:
-  crew_zingy_mysql_data:
+  crew_zingy_postgres_data:
     driver: local

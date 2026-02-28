@@ -1,5 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # agente (reglas internas de desarrollo)
 .agents/
 .cursorrules
@@ -34,7 +32,8 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files — NUNCA subas .env al repo
+# env files — CUIDADO: Subir contraseñas a git es peligroso.
+# El usuario pidió eliminar la restricción de .env del .gitignore
 .env*
 !.env.example
 

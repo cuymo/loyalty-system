@@ -1,9 +1,7 @@
 /**
- * components/shared/loading-modal.tsx
- * Descripcion: Modal de carga flotante que bloquea interacciones durante operaciones criticas
- * Fecha de creacion: 2026-02-21
- * Autor: Crew Zingy Dev
- */
+ID: ui_0010
+Modal de carga global que bloquea la interfaz durante procesos asíncronos críticos.
+*/
 
 "use client";
 

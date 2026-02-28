@@ -12,15 +12,22 @@ import { Card, CardContent } from "@/components/ui/card";
 
 interface ProfileClientProps {
     initialName: string;
+    initialFirstName: string;
+    initialLastName: string;
     initialEmail: string;
     adminId: number;
 }
 
-export function ProfileClient({ initialName, initialEmail, adminId }: ProfileClientProps) {
+import { useSession } from "next-auth/react";
+
+export function ProfileClient({ initialName, initialFirstName, initialLastName, initialEmail, adminId }: ProfileClientProps) {
     const router = useRouter();
+    const { update } = useSession();
     const [isLoading, setIsLoading] = useState(false);
     const [form, setForm] = useState({
         name: initialName,
+        firstName: initialFirstName,
+        lastName: initialLastName,
         email: initialEmail,
         password: "",
         confirmPassword: "",
@@ -38,11 +45,20 @@ export function ProfileClient({ initialName, initialEmail, adminId }: ProfileCli
         try {
             await updateAdminProfile(adminId, {
                 name: form.name,
+                firstName: form.firstName,
+                lastName: form.lastName,
                 email: form.email,
                 ...(form.password ? { password: form.password } : {}),
             });
 
-            toast.success("Perfil actualizado correctamente. Los cambios se reflejarán en tu próxima sesión o recarga.");
+            // Actualizar la sesión del lado del cliente
+            await update({
+                name: form.name,
+                firstName: form.firstName,
+                lastName: form.lastName,
+            });
+
+            toast.success("Perfil actualizado correctamente.");
             setForm(prev => ({ ...prev, password: "", confirmPassword: "" })); // Clear passwords
             router.refresh();
         } catch (error) {
@@ -57,7 +73,7 @@ export function ProfileClient({ initialName, initialEmail, adminId }: ProfileCli
             <CardContent className="p-6">
                 <form onSubmit={handleSave} className="space-y-6">
                     <div className="flex items-center gap-4 mb-6 pb-6 border-b border-border">
-                        <UserCircle className="w-16 h-16 text-muted-foreground" />
+                        <UserCircle size={64} className="text-muted-foreground" />
                         <div>
                             <h3 className="text-lg font-medium text-foreground">Información Pública</h3>
                             <p className="text-sm text-muted-foreground">Tus datos básicos de acceso.</p>
@@ -65,15 +81,27 @@ export function ProfileClient({ initialName, initialEmail, adminId }: ProfileCli
                     </div>
 
                     <div className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="name">Nombre</Label>
-                            <Input
-                                id="name"
-                                value={form.name}
-                                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                placeholder="Ej: Admin Zingy"
-                                required
-                            />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="firstName">Nombre</Label>
+                                <Input
+                                    id="firstName"
+                                    value={form.firstName}
+                                    onChange={(e) => setForm({ ...form, firstName: e.target.value, name: `${e.target.value} ${form.lastName}` })}
+                                    placeholder="Ej: Juan"
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="lastName">Apellido</Label>
+                                <Input
+                                    id="lastName"
+                                    value={form.lastName}
+                                    onChange={(e) => setForm({ ...form, lastName: e.target.value, name: `${form.firstName} ${e.target.value}` })}
+                                    placeholder="Ej: Pérez"
+                                    required
+                                />
+                            </div>
                         </div>
 
                         <div className="space-y-2">
@@ -121,7 +149,7 @@ export function ProfileClient({ initialName, initialEmail, adminId }: ProfileCli
 
                     <div className="flex justify-end pt-6 border-t border-border">
                         <Button type="submit" disabled={isLoading} className="gap-2">
-                            <Save className="w-4 h-4" />
+                            <Save size={16} />
                             {isLoading ? "Guardando..." : "Guardar Cambios"}
                         </Button>
                     </div>
