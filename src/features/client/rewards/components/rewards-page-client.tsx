@@ -12,7 +12,7 @@
 import { useState } from "react";
 import { Gift, History, Ticket, Copy, MessageCircle, Clock } from "lucide-react";
 import type { Reward } from "@/types";
-import { RewardsClientView } from "@/features/clients/components/rewards/rewards-view";
+import { RewardsClientView } from "@/features/client/rewards/components/rewards-view";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/lib/toast";

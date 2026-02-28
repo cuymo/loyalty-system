@@ -13,8 +13,8 @@ import { toast } from "@/lib/toast";
 import type { Setting } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { SettingsGeneralTab } from "@/features/settings/components/settings-general-tab";
-import { SettingsAlertsTab } from "@/features/settings/components/settings-alerts-tab";
+import { SettingsGeneralTab } from "@/features/admin/settings/components/settings-general-tab";
+import { SettingsAlertsTab } from "@/features/admin/settings/components/settings-alerts-tab";
 
 const defaultAlertPrefs: Record<string, { toast: boolean; sound: boolean }> = {
     new_client: { toast: true, sound: true },

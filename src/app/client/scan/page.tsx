@@ -3,7 +3,7 @@
  * Descripcion: Pagina para ingresar codigos QR manualmente y sumar puntos (server wrapper)
  */
 
-import { ScanClient } from "@/features/clients/components/scan/scan-client";
+import { ScanClient } from "@/features/client/scan/components/scan-client";
 import { getClientProfile } from "@/actions/client";
 import { redirect } from "next/navigation";
 

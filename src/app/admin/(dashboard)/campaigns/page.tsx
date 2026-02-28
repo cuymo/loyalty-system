@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getCrmClients, getClientGroups, getClientGroupMembers, getCampaignsHistory } from "@/features/campaigns/actions/admin-campaigns";
+import { getCrmClients, getClientGroups, getClientGroupMembers, getCampaignsHistory } from "@/features/admin/campaigns/actions/admin-campaigns";
 import { CampaignsClient } from "./campaigns-client";
 
 export const dynamic = 'force-dynamic';

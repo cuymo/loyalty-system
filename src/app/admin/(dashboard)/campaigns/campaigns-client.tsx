@@ -11,15 +11,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 
 // Modular sub-components
-import { CampaignStatsCards } from "@/features/campaigns/components/stats-cards";
-import { AudienceTab } from "@/features/campaigns/components/audience-tab";
-import { HistoryTab } from "@/features/campaigns/components/history-tab";
+import { CampaignStatsCards } from "@/features/admin/campaigns/components/stats-cards";
+import { AudienceTab } from "@/features/admin/campaigns/components/audience-tab";
+import { HistoryTab } from "@/features/admin/campaigns/components/history-tab";
 
 // Modal components
-import { GroupsModal } from "@/features/campaigns/components/groups-modal";
-import { AssignGroupModal } from "@/features/campaigns/components/assign-group-modal";
-import { CampaignCreatorModal } from "@/features/campaigns/components/campaign-creator-modal";
-import { ClientDetailDrawer } from "@/features/campaigns/components/client-detail-drawer";
+import { GroupsModal } from "@/features/admin/campaigns/components/groups-modal";
+import { AssignGroupModal } from "@/features/admin/campaigns/components/assign-group-modal";
+import { CampaignCreatorModal } from "@/features/admin/campaigns/components/campaign-creator-modal";
+import { ClientDetailDrawer } from "@/features/admin/campaigns/components/client-detail-drawer";
 
 interface CampaignsClientProps {
     initialClients: any[];

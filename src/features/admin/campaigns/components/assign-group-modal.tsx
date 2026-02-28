@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
-import { assignClientsToGroup } from "@/features/campaigns/actions/admin-campaigns";
+import { assignClientsToGroup } from "@/features/admin/campaigns/actions/admin-campaigns";
 import { useModalStore } from "@/lib/modal-store";
 
 import { Button } from "@/components/ui/button";

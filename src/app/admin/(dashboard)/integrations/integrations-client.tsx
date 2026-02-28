@@ -8,16 +8,16 @@
 
 import { useState } from "react";
 import { updateSetting } from "@/actions/admin";
-import { updateWebhookEvent } from "@/features/integrations/actions";
+import { updateWebhookEvent } from "@/features/admin/integrations/actions";
 import { useRouter } from "next/navigation";
 import { Plug } from "lucide-react";
 import { toast } from "@/lib/toast";
 import type { WebhookEvent, Setting } from "@/types";
 
-import { TypebotSection } from "@/features/integrations/components/typebot-section";
-import { WebhookDocsButton, WebhookDocsModal } from "@/features/integrations/components/webhook-docs-modal";
-import { WebhookUrlsSection } from "@/features/integrations/components/webhook-urls-section";
-import { WebhookEventsList } from "@/features/integrations/components/webhook-events-list";
+import { TypebotSection } from "@/features/admin/integrations/components/typebot-section";
+import { WebhookDocsButton, WebhookDocsModal } from "@/features/admin/integrations/components/webhook-docs-modal";
+import { WebhookUrlsSection } from "@/features/admin/integrations/components/webhook-urls-section";
+import { WebhookEventsList } from "@/features/admin/integrations/components/webhook-events-list";
 
 interface IntegrationsClientProps {
     initialEvents: WebhookEvent[];

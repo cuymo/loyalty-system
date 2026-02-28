@@ -5,7 +5,7 @@
  * Autor: Crew Zingy Dev
  */
 
-import { getReferralSettings, getReferralHistory } from "@/features/referrals/actions/admin-referrals";
+import { getReferralSettings, getReferralHistory } from "@/features/admin/referrals/actions/admin-referrals";
 import { ReferralsClient } from "./referrals-client"; // component rendering ui
 
 export default async function ReferralsPage() {

@@ -8,16 +8,16 @@ import { approveRedemption } from "@/actions/admin";
 import { toast } from "@/lib/toast";
 
 // Modular tab components
-import { ClientsStatsCards } from "@/features/clients/components/stats-cards";
-import { ClientsDirectoryTab } from "@/features/clients/components/directory-tab";
-import { PendingTab } from "@/features/clients/components/pending-tab";
-import { CheckerTab } from "@/features/clients/components/checker-tab";
+import { ClientsStatsCards } from "@/features/admin/clients/components/stats-cards";
+import { ClientsDirectoryTab } from "@/features/admin/clients/components/directory-tab";
+import { PendingTab } from "@/features/admin/clients/components/pending-tab";
+import { CheckerTab } from "@/features/admin/clients/components/checker-tab";
 
 // Modal components
-import { ClientDetailModal } from "@/features/clients/components/client-detail-modal";
-import { BlockClientAlert } from "@/features/clients/components/block-client-alert";
-import { DeleteClientAlert } from "@/features/clients/components/delete-client-alert";
-import { RejectRedemptionModal } from "@/features/clients/components/reject-redemption-modal";
+import { ClientDetailModal } from "@/features/admin/clients/components/client-detail-modal";
+import { BlockClientAlert } from "@/features/admin/clients/components/block-client-alert";
+import { DeleteClientAlert } from "@/features/admin/clients/components/delete-client-alert";
+import { RejectRedemptionModal } from "@/features/admin/clients/components/reject-redemption-modal";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";

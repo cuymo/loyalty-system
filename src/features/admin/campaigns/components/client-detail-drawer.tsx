@@ -3,7 +3,7 @@
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useModalStore } from "@/lib/modal-store";
 import { MessageCircle, ShieldAlert } from "lucide-react";
-import { removeClientsFromGroup } from "@/features/campaigns/actions/admin-campaigns";
+import { removeClientsFromGroup } from "@/features/admin/campaigns/actions/admin-campaigns";
 import { toast } from "@/lib/toast";
 
 import { Button } from "@/components/ui/button";

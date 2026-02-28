@@ -6,9 +6,9 @@
  */
 
 import { getClientProfile, getAvailableAvatars } from "@/actions/client";
-import { getReferralProgress } from "@/features/referrals/actions/client-referrals-logic";
+import { getReferralProgress } from "@/features/client/referrals/actions/client-referrals-logic";
 import { redirect } from "next/navigation";
-import { ProfileClient } from "@/features/clients/components/profile/profile-client";
+import { ProfileClient } from "@/features/client/profile/components/profile-client";
 
 export default async function ProfilePage() {
     const client = await getClientProfile();

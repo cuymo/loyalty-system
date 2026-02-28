@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { MessageCircle, Gift } from "lucide-react";
 import { toast } from "@/lib/toast";
-import { processCrmCampaign } from "@/features/campaigns/actions/admin-campaigns";
+import { processCrmCampaign } from "@/features/admin/campaigns/actions/admin-campaigns";
 import { useModalStore } from "@/lib/modal-store";
 
 import { Button } from "@/components/ui/button";

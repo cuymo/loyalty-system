@@ -13,10 +13,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { BatchCard, type CodeBatch } from "@/features/codes/components/batch-card";
-import { GenerateCodesModal } from "@/features/codes/components/generate-codes-modal";
-import { ViewBatchModal } from "@/features/codes/components/view-batch-modal";
-import { DeleteBatchAlert } from "@/features/codes/components/delete-batch-alert";
+import { BatchCard, type CodeBatch } from "@/features/admin/codes/components/batch-card";
+import { GenerateCodesModal } from "@/features/admin/codes/components/generate-codes-modal";
+import { ViewBatchModal } from "@/features/admin/codes/components/view-batch-modal";
+import { DeleteBatchAlert } from "@/features/admin/codes/components/delete-batch-alert";
 
 interface CodesClientProps {
     initialBatches: CodeBatch[];

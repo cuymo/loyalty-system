@@ -22,9 +22,9 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 
-import { RewardCard } from "@/features/rewards/components/reward-card";
-import { RewardModal } from "@/features/rewards/components/reward-modal";
-import { RewardDeleteAlert } from "@/features/rewards/components/reward-delete-alert";
+import { RewardCard } from "@/features/admin/rewards/components/reward-card";
+import { RewardModal } from "@/features/admin/rewards/components/reward-modal";
+import { RewardDeleteAlert } from "@/features/admin/rewards/components/reward-delete-alert";
 
 interface RewardsClientProps {
     initialRewards: Reward[];

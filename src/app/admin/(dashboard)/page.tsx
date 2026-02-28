@@ -5,7 +5,7 @@ Panel de control administrativo principal con métricas consolidadas, gráficos 
 
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getDashboardMetrics, getDashboardChartData } from "@/features/dashboard/actions";
+import { getDashboardMetrics, getDashboardChartData } from "@/features/admin/dashboard/actions";
 import Link from "next/link";
 import {
     Users,

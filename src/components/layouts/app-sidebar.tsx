@@ -18,9 +18,9 @@ import {
   Share2,
 } from "lucide-react"
 
-import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
-import { NavUser } from "@/components/nav-user"
+import { NavMain } from "@/components/layouts/nav-main"
+import { NavSecondary } from "@/components/layouts/nav-secondary"
+import { NavUser } from "@/components/layouts/nav-user"
 import {
   Sidebar,
   SidebarContent,

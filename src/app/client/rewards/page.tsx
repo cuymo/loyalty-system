@@ -11,8 +11,8 @@ import { getClientProfile } from "@/actions/client";
 import { getAvailableRewards } from "@/actions/client";
 import { getMyRedemptions } from "@/actions/client";
 import { redirect } from "next/navigation";
-import { RewardsClientView } from "@/features/clients/components/rewards/rewards-view";
-import { RewardsPageClient } from "@/features/clients/components/rewards/rewards-page-client";
+import { RewardsClientView } from "@/features/client/rewards/components/rewards-view";
+import { RewardsPageClient } from "@/features/client/rewards/components/rewards-page-client";
 
 export default async function ClientRewardsPage() {
     const client = await getClientProfile();

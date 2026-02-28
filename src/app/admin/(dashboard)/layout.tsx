@@ -7,8 +7,8 @@
 
 import type { Metadata } from "next";
 import { SessionProvider } from "next-auth/react";
-import { AppSidebar } from "@/components/app-sidebar";
-import { SiteHeader } from "@/components/site-header";
+import { AppSidebar } from "@/components/layouts/app-sidebar";
+import { SiteHeader } from "@/components/layouts/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 export const metadata: Metadata = {

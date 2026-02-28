@@ -22,7 +22,7 @@ import { readdir } from "fs/promises";
 import { join } from "path";
 import { triggerWebhook } from "@/lib/webhook";
 import { eventBus } from "@/lib/events";
-import { processReferral } from "@/features/referrals/actions/client-referrals-logic";
+import { processReferral } from "@/features/client/referrals/actions/client-referrals-logic";
 import bcrypt from "bcryptjs";
 
 export async function checkFieldAvailability(field: "username" | "email" | "phone", value: string) {

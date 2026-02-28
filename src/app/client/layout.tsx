@@ -14,9 +14,9 @@ import { getPublicSettings } from "@/actions/client";
 import { db } from "@/db";
 import { clients } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { ClientTypebotBubble } from "@/features/integrations/components/client-typebot";
+import { ClientTypebotBubble } from "@/features/client/integrations/components/client-typebot";
 import { ModeToggle } from "@/components/shared/mode-toggle";
-import { ClientNotificationBell } from "@/features/notifications/components/client-notification-bell";
+import { ClientNotificationBell } from "@/features/client/notifications/components/client-notification-bell";
 import { ThemeProvider } from "@/components/shared/theme-provider";
 
 export default async function ClientLayout({

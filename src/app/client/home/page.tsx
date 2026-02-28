@@ -7,10 +7,10 @@ import { getClientProfile } from "@/actions/client";
 import { getPublicSettings } from "@/actions/client";
 import { getMyRedemptions } from "@/actions/client";
 import { redirect } from "next/navigation";
-import { ClientLoyaltyCard } from "@/features/clients/components/home/client-loyalty-card";
-import { ClientQuickActions } from "@/features/clients/components/home/client-quick-actions";
-import { ClientPendingRedemptions } from "@/features/clients/components/home/client-pending-redemptions";
-import { ClientAuthNotice } from "@/features/clients/components/home/client-auth-notice";
+import { ClientLoyaltyCard } from "@/features/client/home/components/client-loyalty-card";
+import { ClientQuickActions } from "@/features/client/home/components/client-quick-actions";
+import { ClientPendingRedemptions } from "@/features/client/home/components/client-pending-redemptions";
+import { ClientAuthNotice } from "@/features/client/home/components/client-auth-notice";
 
 export default async function ClientHomePage() {
     const client = await getClientProfile();

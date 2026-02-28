@@ -7,7 +7,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { updateReferralSettings } from "@/features/referrals/actions/admin-referrals";
+import { updateReferralSettings } from "@/features/admin/referrals/actions/admin-referrals";
 import { useRouter } from "next/navigation";
 import { toast } from "@/lib/toast";
 import type { Setting } from "@/types";
@@ -18,9 +18,9 @@ import {
     TabsTrigger,
 } from "@/components/ui/tabs";
 
-import { ReferralConfigTab } from "@/features/referrals/components/referral-config-tab";
-import { ReferralMessageTab } from "@/features/referrals/components/referral-message-tab";
-import { ReferralHistoryTab } from "@/features/referrals/components/referral-history-tab";
+import { ReferralConfigTab } from "@/features/admin/referrals/components/referral-config-tab";
+import { ReferralMessageTab } from "@/features/admin/referrals/components/referral-message-tab";
+import { ReferralHistoryTab } from "@/features/admin/referrals/components/referral-history-tab";
 
 interface ReferralsClientProps {
     initialSettings: Setting[];

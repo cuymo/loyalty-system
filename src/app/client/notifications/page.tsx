@@ -6,7 +6,7 @@
 import { getClientSession } from "@/lib/auth/client-jwt";
 import { redirect } from "next/navigation";
 import { getAppNotifications } from "@/actions/client";
-import { NotificationsClient } from "@/features/clients/components/notifications/notifications-client";
+import { NotificationsClient } from "@/features/client/notifications/components/notifications-client";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {

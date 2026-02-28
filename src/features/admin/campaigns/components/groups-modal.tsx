@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Plus, Trash } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
-import { createClientGroup, deleteClientGroup } from "@/features/campaigns/actions/admin-campaigns";
+import { createClientGroup, deleteClientGroup } from "@/features/admin/campaigns/actions/admin-campaigns";
 import { useModalStore } from "@/lib/modal-store";
 
 import { Button } from "@/components/ui/button";

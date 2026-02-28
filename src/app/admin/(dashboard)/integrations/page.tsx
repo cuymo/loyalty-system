@@ -8,7 +8,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getSettings } from "@/actions/admin";
-import { getWebhookEvents } from "@/features/integrations/actions";
+import { getWebhookEvents } from "@/features/admin/integrations/actions";
 import { IntegrationsClient } from "./integrations-client";
 
 export default async function IntegrationsPage() {
