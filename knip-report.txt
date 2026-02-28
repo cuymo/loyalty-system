@@ -1,0 +1,100 @@
+[93m[4mUnused files[24m[39m (9)
+public/sw.js                                                     
+src/lib/push-notifications.ts                                    
+src/components/shared/loading-modal.tsx                          
+src/components/ui/breadcrumb.tsx                                 
+src/components/ui/scroll-area.tsx                                
+src/lib/validators/index.ts                                      
+src/features/admin/clients/components/checker-modal.tsx          
+src/features/admin/clients/components/clients-directory-modal.tsx
+src/features/admin/clients/components/pending-modal.tsx          
+[93m[4mUnused dependencies[24m[39m (11)
+@radix-ui/react-checkbox       package.json:18:6
+@radix-ui/react-dialog         package.json:19:6
+@radix-ui/react-dropdown-menu  package.json:20:6
+@radix-ui/react-label          package.json:21:6
+@radix-ui/react-popover        package.json:22:6
+@radix-ui/react-scroll-area    package.json:23:6
+@radix-ui/react-select         package.json:24:6
+@radix-ui/react-separator      package.json:25:6
+@radix-ui/react-slot           package.json:26:6
+@radix-ui/react-tabs           package.json:27:6
+@radix-ui/react-tooltip        package.json:28:6
+[93m[4mUnused devDependencies[24m[39m (2)
+@types/bcryptjs  package.json:58:6
+comment-json     package.json:62:6
+[93m[4mUnlisted dependencies[24m[39m (1)
+postcss  postcss.config.mjs
+[93m[4mUnused exports[24m[39m (64)
+verifyRegistrationToken  function  src/lib/auth/client-jwt.ts:158:23                                       
+requestOtp               function  src/features/auth/actions/client-auth.ts:85:23                          
+verifyOtp                function  src/features/auth/actions/client-auth.ts:174:23                         
+SidebarGroupAction                 src/components/ui/sidebar.tsx:706:3                                     
+SidebarInput                       src/components/ui/sidebar.tsx:710:3                                     
+SidebarMenuAction                  src/components/ui/sidebar.tsx:713:3                                     
+SidebarMenuBadge                   src/components/ui/sidebar.tsx:714:3                                     
+SidebarMenuSkeleton                src/components/ui/sidebar.tsx:717:3                                     
+SidebarMenuSub                     src/components/ui/sidebar.tsx:718:3                                     
+SidebarMenuSubButton               src/components/ui/sidebar.tsx:719:3                                     
+SidebarMenuSubItem                 src/components/ui/sidebar.tsx:720:3                                     
+SidebarRail                        src/components/ui/sidebar.tsx:722:3                                     
+SidebarSeparator                   src/components/ui/sidebar.tsx:723:3                                     
+signIn                             src/lib/auth/index.ts:10:26                                             
+signOut                            src/lib/auth/index.ts:10:34                                             
+badgeVariants                      src/components/ui/badge.tsx:48:17                                       
+getClientById            function  src/features/admin/clients/actions/admin-clients.ts:22:23               
+description                        src/features/admin/dashboard/components/chart-area-interactive.tsx:33:14
+sendCustomNotification   function  src/features/admin/notifications/actions/admin-notifications.ts:14:23   
+getAdminNotifications    function  src/features/admin/notifications/actions/admin-notifications.ts:76:23   
+getAdminUnreadCount      function  src/features/admin/notifications/actions/admin-notifications.ts:86:23   
+AvatarBadge                        src/components/ui/avatar.tsx:106:3                                      
+AvatarGroup                        src/components/ui/avatar.tsx:107:3                                      
+AvatarGroupCount                   src/components/ui/avatar.tsx:108:3                                      
+DropdownMenuPortal                 src/components/ui/dropdown-menu.tsx:243:3                               
+DropdownMenuRadioGroup             src/components/ui/dropdown-menu.tsx:250:3                               
+DropdownMenuRadioItem              src/components/ui/dropdown-menu.tsx:251:3                               
+DropdownMenuShortcut               src/components/ui/dropdown-menu.tsx:253:3                               
+DropdownMenuSub                    src/components/ui/dropdown-menu.tsx:254:3                               
+DropdownMenuSubTrigger             src/components/ui/dropdown-menu.tsx:255:3                               
+DropdownMenuSubContent             src/components/ui/dropdown-menu.tsx:256:3                               
+AlertTitle                         src/components/ui/alert.tsx:66:17                                       
+CalendarDayButton                  src/components/ui/calendar.tsx:220:20                                   
+ChartLegend                        src/components/ui/chart.tsx:354:3                                       
+ChartLegendContent                 src/components/ui/chart.tsx:355:3                                       
+ChartStyle                         src/components/ui/chart.tsx:356:3                                       
+DialogClose                        src/components/ui/dialog.tsx:149:3                                      
+DialogDescription                  src/components/ui/dialog.tsx:151:3                                      
+DialogOverlay                      src/components/ui/dialog.tsx:154:3                                      
+DialogPortal                       src/components/ui/dialog.tsx:155:3                                      
+DialogTrigger                      src/components/ui/dialog.tsx:157:3                                      
+DrawerPortal                       src/components/ui/drawer.tsx:126:3                                      
+DrawerOverlay                      src/components/ui/drawer.tsx:127:3                                      
+FieldError                         src/components/ui/field.tsx:241:3                                       
+FieldLegend                        src/components/ui/field.tsx:243:3                                       
+FieldSeparator                     src/components/ui/field.tsx:244:3                                       
+FieldSet                           src/components/ui/field.tsx:245:3                                       
+FieldContent                       src/components/ui/field.tsx:246:3                                       
+FieldTitle                         src/components/ui/field.tsx:247:3                                       
+PopoverAnchor                      src/components/ui/popover.tsx:85:3                                      
+PopoverHeader                      src/components/ui/popover.tsx:86:3                                      
+PopoverTitle                       src/components/ui/popover.tsx:87:3                                      
+PopoverDescription                 src/components/ui/popover.tsx:88:3                                      
+SelectGroup                        src/components/ui/select.tsx:182:3                                      
+SelectLabel                        src/components/ui/select.tsx:184:3                                      
+SelectScrollDownButton             src/components/ui/select.tsx:185:3                                      
+SelectScrollUpButton               src/components/ui/select.tsx:186:3                                      
+SelectSeparator                    src/components/ui/select.tsx:187:3                                      
+SheetClose                         src/components/ui/sheet.tsx:137:3                                       
+SheetFooter                        src/components/ui/sheet.tsx:140:3                                       
+TableFooter                        src/components/ui/table.tsx:111:3                                       
+TableCaption                       src/components/ui/table.tsx:115:3                                       
+tabsListVariants                   src/components/ui/tabs.tsx:91:52                                        
+Toggle                             src/components/ui/toggle.tsx:47:10                                      
+[93m[4mUnused exported types[24m[39m (7)
+ClientSession            interface  src/lib/auth/client-jwt.ts:30:18                                       
+LoyaltyCardProps         interface  src/features/client/home/components/client-loyalty-card.tsx:4:18       
+PendingRedemptionsProps  interface  src/features/client/home/components/client-pending-redemptions.tsx:3:18
+Admin                    type       src/types/index.ts:19:13                                               
+Redemption               type       src/types/index.ts:23:13                                               
+ApiResponse              interface  src/types/index.ts:28:18                                               
+WebhookPayload           interface  src/types/index.ts:35:18                                               

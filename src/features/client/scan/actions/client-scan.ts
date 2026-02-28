@@ -2,11 +2,12 @@
 
 import { db } from "@/db";
 import { clients, codes, appNotifications, adminNotifications } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getClientSession } from "@/lib/auth/client-jwt";
 import { triggerWebhook } from "@/lib/webhook";
 import { eventBus } from "@/lib/events";
+import { getPublicSettings } from "@/features/auth/actions/client-auth";
 
 /**
 ID: act_0018

@@ -25,36 +25,6 @@
     "paths": {
       "@/*": [
         "./src/*"
-      ],
-      "@admin/*": [
-        "./src/features/admin/*"
-      ],
-      "@client/*": [
-        "./src/features/client/*"
-      ],
-      "@auth/*": [
-        "./src/features/auth/*"
-      ],
-      "@ui/*": [
-        "./src/components/ui/*"
-      ],
-      "@shared/*": [
-        "./src/components/shared/*"
-      ],
-      "@layouts/*": [
-        "./src/components/layouts/*"
-      ],
-      "@db/*": [
-        "./src/db/*"
-      ],
-      "@lib/*": [
-        "./src/lib/*"
-      ],
-      "@hooks/*": [
-        "./src/hooks/*"
-      ],
-      "@types/*": [
-        "./src/types/*"
       ]
     }
   },

@@ -2,7 +2,7 @@
 
 import { db } from "@/db";
 import { clients, appNotifications, adminNotifications } from "@/db/schema";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, sql } from "drizzle-orm";
 import { createClientSession, createRegistrationToken, destroyRegistrationToken } from "@/lib/auth/client-jwt";
 import { triggerWebhook } from "@/lib/webhook";
 import { eventBus } from "@/lib/events";

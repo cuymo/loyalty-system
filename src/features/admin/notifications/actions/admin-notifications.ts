@@ -7,8 +7,8 @@
 
 import { db } from "@/db";
 import { requireAdminSession } from "@/lib/auth/require-admin";
-import { clients, appNotifications } from "@/db/schema";
-import { and, inArray, isNull } from "drizzle-orm";
+import { clients, appNotifications, adminNotifications } from "@/db/schema";
+import { and, inArray, isNull, desc, eq } from "drizzle-orm";
 import { triggerWebhook } from "@/lib/webhook";
 
 export async function sendCustomNotification(

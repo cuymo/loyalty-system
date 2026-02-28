@@ -8,6 +8,7 @@ import { getClientSession, destroyClientSession } from "@/lib/auth/client-jwt";
 import { triggerWebhook } from "@/lib/webhook";
 import { eventBus } from "@/lib/events";
 import { processReferral } from "@/features/client/referrals/actions/client-referrals-logic";
+import { getPublicSettings } from "@/features/auth/actions/client-auth";
 
 /**
 ID: act_0008
